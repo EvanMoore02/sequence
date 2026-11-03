@@ -2,6 +2,24 @@ import{readFile}from'node:fs/promises';import{fileURLToPath}from'node:url';impor
 const bankPath=process.argv[2]?resolve(process.cwd(),process.argv[2]):resolve(dirname(fileURLToPath(import.meta.url)),'../src/data/puzzles.json');
 const bank=JSON.parse(await readFile(bankPath,'utf8')),errors=[],levels=new Set(['Easy','Medium','Hard','Expert']),ids=new Set(),signatures=new Set();
 const factorial=n=>{let value=1;for(let i=2;i<=n;i++)value*=i;return value};
+const patternComplexity={arithmetic:0,geometric:1,power:1,fibonacci:2,alternating:3,'increasing-difference':4,'doubling-difference':3,'multiply-adjust':3,factorial:4};
+const ratingLevel=score=>score<=1?'Easy':score<=3?'Medium':score<=5?'Hard':'Expert';
+function rateDifficulty(sequence,answer,pattern){
+ const values=[...sequence,answer];let score=patternComplexity[pattern.type]??0;
+ if(sequence.length===4)score++;
+ if(pattern.type==='geometric'&&pattern.factor>=3)score++;
+ if(pattern.type==='power'&&pattern.exponent===3)score++;
+ if(pattern.type==='alternating')score++;
+ if(pattern.type==='multiply-adjust'){if(pattern.factor>=3)score++;if(pattern.offset!==0)score++}
+ const magnitude=Math.max(...values.map(Math.abs));if(magnitude>=1000)score+=2;else if(magnitude>=100)score++;
+ if(values.some(value=>value<0))score++;
+ const d=values[1]-values[0];if(pattern.type!=='arithmetic'&&values.slice(2).every((value,index)=>value-values[index+1]===d))score++;
+ if(pattern.type!=='geometric'&&values[0]!==0&&values[1]%values[0]===0&&values[1]/values[0]>1&&values.slice(2).every((value,index)=>value===values[index+1]*(values[1]/values[0])))score++;
+ if(pattern.type!=='fibonacci'&&values.slice(2).every((value,index)=>value===values[index]+values[index+1]))score++;
+ if(pattern.type!=='power'&&[2,3].some(power=>values.every((value,index)=>value===(values[0]+index)**power)))score++;
+ score-=Math.max(0,[pattern.type!=='arithmetic'&&values.slice(2).every((value,index)=>value-values[index+1]===d),pattern.type!=='geometric'&&values[0]!==0&&values[1]%values[0]===0&&values[1]/values[0]>1&&values.slice(2).every((value,index)=>value===values[index+1]*(values[1]/values[0])),pattern.type!=='fibonacci'&&values.slice(2).every((value,index)=>value===values[index]+values[index+1]),pattern.type!=='power'&&[2,3].some(power=>values.every((value,index)=>value===(values[0]+index)**power))].filter(Boolean).length-2);
+ return{score,difficulty:ratingLevel(score)};
+}
 function derive(p){const s=p.sequence,q=p.pattern,count=s.length+1;switch(q.type){
 case'arithmetic':return Array.from({length:count},(_,i)=>s[0]+i*q.step);
 case'geometric':return Array.from({length:count},(_,i)=>s[0]*q.factor**i);
@@ -28,7 +46,8 @@ else if(Number.isSafeInteger(p.answer)&&!p.explanation.split(/[^0-9-]+/).include
 if(!Array.isArray(p.hints)||p.hints.length!==3||!p.hints.every(h=>typeof h==='string'&&h.trim().length>=4))errors.push(name+': provide exactly three non-empty hints.');
 else if(new Set(p.hints.map(h=>h.trim().toLowerCase())).size!==3)errors.push(name+': hints must be distinct.');
 if(!p.pattern||typeof p.pattern.type!=='string')errors.push(name+': answer pattern descriptor is required.');
+if(Array.isArray(p.sequence)&&Number.isSafeInteger(p.answer)&&p.pattern?.type&&patternComplexity[p.pattern.type]!==undefined){const rating=rateDifficulty(p.sequence,p.answer,p.pattern);if(p.difficulty!==rating.difficulty)errors.push(name+': difficulty is '+p.difficulty+' but the rating rubric gives '+rating.difficulty+' (score '+rating.score+').')}
 if(Array.isArray(p.sequence)&&p.sequence.length>=4&&Number.isSafeInteger(p.answer)&&p.pattern?.type){try{const terms=derive(p);if(!terms.slice(0,p.sequence.length).every((value,i)=>value===p.sequence[i])||terms.at(-1)!==p.answer)errors.push(name+': sequence or answer does not match its declared rule.');if(!terms.every(Number.isSafeInteger))errors.push(name+': declared rule generates an unsafe integer.')}catch(error){errors.push(name+': '+error.message)}}
 const signature=JSON.stringify([p.sequence,p.answer]);if(signatures.has(signature))errors.push(name+': duplicate sequence and answer.');signatures.add(signature);
 }
-if(errors.length){console.error('Puzzle bank validation failed:');for(const error of errors)console.error(' - '+error);process.exitCode=1}else console.log('Validated '+bank.puzzles.length+' puzzles: fields, difficulty, three hints, explanations, uniqueness, and rule-derived answers are consistent.');
+if(errors.length){console.error('Puzzle bank validation failed:');for(const error of errors)console.error(' - '+error);process.exitCode=1}else console.log('Validated '+bank.puzzles.length+' puzzles: fields, rubric-rated difficulty, three hints, explanations, uniqueness, and rule-derived answers are consistent.');

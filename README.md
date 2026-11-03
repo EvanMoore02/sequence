@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. Progress, settings, and statistics stay in this browser's localStorage.
+Open the local URL printed by Vite. Daily progress, Practice and Endless sessions, settings, and statistics are saved in this browser on this device. There are no accounts or cloud backups; clearing browser data may erase saved progress, and it will not sync across devices.
 
 ## Modes
 

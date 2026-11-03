@@ -1,7 +1,7 @@
-import{describe,expect,it}from'vitest';import{generatePracticePuzzle,templates}from'./generator';
+import{describe,expect,it}from'vitest';import{generatePracticePuzzle,templates}from'./generator';import{rateDifficulty}from'./difficulty';
 function rngFrom(seed:number){let x=seed>>>0;return()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296}}
 function validate(p:ReturnType<typeof generatePracticePuzzle>){
- expect(p.sequence.length).toBeGreaterThanOrEqual(4);expect(p.sequence.length).toBeLessThanOrEqual(6);expect([...p.sequence,p.answer].every(Number.isSafeInteger)).toBe(true);expect(Math.max(...p.sequence.map(Math.abs),Math.abs(p.answer))).toBeLessThanOrEqual(1_000_000);expect(p.hints).toHaveLength(3);expect(p.explanation.length).toBeGreaterThan(0);
+ expect(p.sequence.length).toBeGreaterThanOrEqual(4);expect(p.sequence.length).toBeLessThanOrEqual(6);expect([...p.sequence,p.answer].every(Number.isSafeInteger)).toBe(true);expect(Math.max(...p.sequence.map(Math.abs),Math.abs(p.answer))).toBeLessThanOrEqual(1_000_000);expect(p.hints).toHaveLength(3);expect(p.explanation.length).toBeGreaterThan(0);expect(rateDifficulty(p.sequence,p.answer,p.pattern)).toEqual({score:p.difficultyScore,difficulty:p.difficulty});
  const all=[...p.sequence,p.answer],parts=p.id.split(':');
  switch(p.templateId){
  case'arithmetic':{const d=all[1]-all[0];expect(all.slice(2).every((v,i)=>v===all[i+1]+d)).toBe(true);break}
