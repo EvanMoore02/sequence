@@ -20,3 +20,9 @@ Open the local URL printed by Vite. Daily progress and statistics are stored in 
 - Keyboard submission, reduced-motion support, and share/copy results
 
 The daily set resets using the browser's local calendar date. Challenge #001 is anchored to November 2, 2026.
+
+- Endless Practice with Easy, Medium, Hard, Expert, and All choices
+- Unlimited attempts, optional progressive hints, and rule explanations after solving
+- Practice session and puzzle history saved separately from daily stats
+
+Practice puzzles are generated locally from typed templates in `src/engine/generator.ts`. To run generator checks, use `npm test`.
