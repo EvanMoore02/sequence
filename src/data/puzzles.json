@@ -1,0 +1,361 @@
+{
+  "$schema": "./puzzle.schema.json",
+  "puzzles": [
+    {
+      "id": "add2",
+      "category": "Arithmetic",
+      "difficulty": "Easy",
+      "sequence": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "answer": 10,
+      "rule": "Add 2",
+      "explanation": "Each number increases by 2, so the next number is 10.",
+      "hints": [
+        "Compare the gaps.",
+        "The difference stays constant.",
+        "Add 2 each time."
+      ],
+      "pattern": {
+        "type": "arithmetic",
+        "step": 2
+      }
+    },
+    {
+      "id": "add3",
+      "category": "Arithmetic",
+      "difficulty": "Easy",
+      "sequence": [
+        3,
+        6,
+        9,
+        12
+      ],
+      "answer": 15,
+      "rule": "Add 3",
+      "explanation": "Each number increases by 3, so the next number is 15.",
+      "hints": [
+        "Notice how much the numbers change.",
+        "The same amount is added each time.",
+        "Add 3 each time."
+      ],
+      "pattern": {
+        "type": "arithmetic",
+        "step": 3
+      }
+    },
+    {
+      "id": "sub5",
+      "category": "Arithmetic",
+      "difficulty": "Easy",
+      "sequence": [
+        30,
+        25,
+        20,
+        15
+      ],
+      "answer": 10,
+      "rule": "Subtract 5",
+      "explanation": "Each number decreases by 5, so the next number is 10.",
+      "hints": [
+        "The sequence goes down.",
+        "Check the differences.",
+        "Subtract 5 each time."
+      ],
+      "pattern": {
+        "type": "arithmetic",
+        "step": -5
+      }
+    },
+    {
+      "id": "double",
+      "category": "Multiplication",
+      "difficulty": "Easy",
+      "sequence": [
+        2,
+        4,
+        8,
+        16
+      ],
+      "answer": 32,
+      "rule": "Double",
+      "explanation": "Each number is twice the one before it, so the next number is 32.",
+      "hints": [
+        "Compare neighbors.",
+        "The same multiplier repeats.",
+        "Multiply by 2."
+      ],
+      "pattern": {
+        "type": "geometric",
+        "factor": 2
+      }
+    },
+    {
+      "id": "square",
+      "category": "Powers",
+      "difficulty": "Easy",
+      "sequence": [
+        1,
+        4,
+        9,
+        16
+      ],
+      "answer": 25,
+      "rule": "Square numbers",
+      "explanation": "These are 1², 2², 3², and 4²; the next is 5² = 25.",
+      "hints": [
+        "These grow faster each step.",
+        "Each is a number times itself.",
+        "The next is 5²."
+      ],
+      "pattern": {
+        "type": "power",
+        "exponent": 2,
+        "start": 1
+      }
+    },
+    {
+      "id": "fib",
+      "category": "Recursive",
+      "difficulty": "Medium",
+      "sequence": [
+        1,
+        1,
+        2,
+        3,
+        5
+      ],
+      "answer": 8,
+      "rule": "Add the previous two",
+      "explanation": "Each term is the sum of the two before it: 3 + 5 = 8.",
+      "hints": [
+        "Look back two positions.",
+        "Each term uses the two before it.",
+        "Add 3 and 5."
+      ],
+      "pattern": {
+        "type": "fibonacci"
+      }
+    },
+    {
+      "id": "alt",
+      "category": "Alternating",
+      "difficulty": "Medium",
+      "sequence": [
+        2,
+        10,
+        4,
+        20,
+        6
+      ],
+      "answer": 30,
+      "rule": "Two alternating sequences",
+      "explanation": "Odd positions increase by 2; even positions increase by 10, so the next number is 30.",
+      "hints": [
+        "Split positions into two groups.",
+        "Odd and even positions differ.",
+        "Even-position values go 10, 20, 30."
+      ],
+      "pattern": {
+        "type": "alternating",
+        "oddStep": 2,
+        "evenStep": 10
+      }
+    },
+    {
+      "id": "oddgaps",
+      "category": "Differences",
+      "difficulty": "Medium",
+      "sequence": [
+        1,
+        4,
+        9,
+        16,
+        25
+      ],
+      "answer": 36,
+      "rule": "Consecutive odd differences",
+      "explanation": "The gaps are 3, 5, 7, and 9; next add 11 to get 36.",
+      "hints": [
+        "Look at the differences.",
+        "Differences increase by 2.",
+        "Add 11 to 25."
+      ],
+      "pattern": {
+        "type": "increasing-difference",
+        "firstDifference": 3,
+        "growth": 2
+      }
+    },
+    {
+      "id": "doublinggaps",
+      "category": "Mixed",
+      "difficulty": "Medium",
+      "sequence": [
+        2,
+        3,
+        5,
+        9,
+        17
+      ],
+      "answer": 33,
+      "rule": "Differences double",
+      "explanation": "The gaps are 1, 2, 4, and 8. Next add 16 to get 33.",
+      "hints": [
+        "Compare the differences.",
+        "Differences double.",
+        "Add 16 to 17."
+      ],
+      "pattern": {
+        "type": "doubling-difference",
+        "firstDifference": 1
+      }
+    },
+    {
+      "id": "triple",
+      "category": "Multiplication",
+      "difficulty": "Medium",
+      "sequence": [
+        3,
+        9,
+        27,
+        81
+      ],
+      "answer": 243,
+      "rule": "Multiply by 3",
+      "explanation": "Each number is multiplied by 3, so the next is 243.",
+      "hints": [
+        "Check the ratios.",
+        "The multiplier repeats.",
+        "Multiply by 3."
+      ],
+      "pattern": {
+        "type": "geometric",
+        "factor": 3
+      }
+    },
+    {
+      "id": "cubes",
+      "category": "Powers",
+      "difficulty": "Hard",
+      "sequence": [
+        1,
+        8,
+        27,
+        64
+      ],
+      "answer": 125,
+      "rule": "Cube numbers",
+      "explanation": "These are 1³, 2³, 3³, and 4³; next is 5³ = 125.",
+      "hints": [
+        "Growth is faster than squares.",
+        "Each term is multiplied by itself three times.",
+        "The next is 5³."
+      ],
+      "pattern": {
+        "type": "power",
+        "exponent": 3,
+        "start": 1
+      }
+    },
+    {
+      "id": "subdouble",
+      "category": "Differences",
+      "difficulty": "Hard",
+      "sequence": [
+        100,
+        96,
+        88,
+        72
+      ],
+      "answer": 40,
+      "rule": "Subtract doubling amounts",
+      "explanation": "Subtract 4, 8, and 16; next subtract 32 to get 40.",
+      "hints": [
+        "Look at gaps.",
+        "The amount subtracted doubles.",
+        "Subtract 32 from 72."
+      ],
+      "pattern": {
+        "type": "doubling-difference",
+        "firstDifference": -4
+      }
+    },
+    {
+      "id": "times3minus1",
+      "category": "Mixed",
+      "difficulty": "Hard",
+      "sequence": [
+        2,
+        5,
+        14,
+        41
+      ],
+      "answer": 122,
+      "rule": "Multiply by 3, then subtract 1",
+      "explanation": "Each term is previous × 3 − 1: 41 × 3 − 1 = 122.",
+      "hints": [
+        "Try multiplication and an adjustment.",
+        "Multiply by 3 and subtract 1.",
+        "41 × 3 − 1 = 122."
+      ],
+      "pattern": {
+        "type": "multiply-adjust",
+        "factor": 3,
+        "offset": -1
+      }
+    },
+    {
+      "id": "altcount",
+      "category": "Alternating",
+      "difficulty": "Expert",
+      "sequence": [
+        1,
+        10,
+        2,
+        20,
+        3
+      ],
+      "answer": 30,
+      "rule": "Interleaved counting",
+      "explanation": "Odd positions count 1, 2, 3; even positions count by tens. The next even-position value is 30.",
+      "hints": [
+        "Two patterns are interleaved.",
+        "Read positions 2 and 4.",
+        "The next even-position value is 30."
+      ],
+      "pattern": {
+        "type": "alternating",
+        "oddStep": 1,
+        "evenStep": 10
+      }
+    },
+    {
+      "id": "factorial",
+      "category": "Recursive",
+      "difficulty": "Expert",
+      "sequence": [
+        1,
+        2,
+        6,
+        24,
+        120
+      ],
+      "answer": 720,
+      "rule": "Factorials",
+      "explanation": "Multiply by 2, 3, 4, and 5; next multiply by 6 to get 720.",
+      "hints": [
+        "Look at the ratios.",
+        "Multipliers count upward.",
+        "Multiply 120 by 6."
+      ],
+      "pattern": {
+        "type": "factorial",
+        "start": 1
+      }
+    }
+  ]
+}

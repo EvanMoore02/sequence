@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+Open the local URL printed by Vite. Progress, settings, and statistics stay in this browser's localStorage.
 
 ## Modes
 
@@ -17,14 +17,16 @@ Open the local URL printed by Vite.
 - **Practice:** choose a difficulty and solve generated puzzles with unlimited attempts.
 - **Endless:** three lives, rising difficulty, attempt scoring, first-try streak bonuses, and a personal best.
 
-## Statistics
+## Settings and statistics
 
-Open the chart icon in the header to see daily challenge totals, streaks, average score, accuracy, first-try solve rate, score history, and Endless high score. Older local saves remain readable; averages and history begin recording from this update.
+Settings let you choose a light or dark theme and system, reduced, or standard motion. The chart icon opens statistics for daily totals, streaks, average score, accuracy, first-try solve rate, recent score history, and Endless high score.
 
-## Puzzle generation and checks
+## Author daily puzzles
 
-Practice and Endless puzzles are generated on-device from typed rule templates in `src/engine/generator.ts`. Run `npm test` for generator, scoring, difficulty, and statistics checks.
+Edit `src/data/puzzles.json` and add an entry to its `puzzles` array. Each entry includes the displayed sequence, answer, rule, three ordered hints, explanation, difficulty, and a machine-readable `pattern` descriptor. The descriptor lets the validator independently calculate the continuation.
 
-Progress, stats, and best scores are saved to this browser's localStorage. The daily set uses the browser's local date. Challenge #001 is anchored to November 2, 2026.
+Supported descriptors are arithmetic, geometric, powers, Fibonacci, alternating sequences, increasing or doubling differences, multiply-adjust, and factorial. The JSON file references `src/data/puzzle.schema.json` for editor assistance.
 
-Settings let you choose a light or dark theme and system, reduced, or standard motion. Preferences apply across the app and are saved locally.
+Run `npm run validate:puzzles` to check required fields, valid difficulty, three distinct hints, answer mention in the explanation, duplicate entries, and that the sequence and answer match the descriptor. Run `npm test` to run the application tests and puzzle-bank validation.
+
+Practice and Endless puzzles are generated on-device from templates in `src/engine/generator.ts`. The daily set uses the browser's local date; Challenge #001 is anchored to November 2, 2026.
