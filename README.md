@@ -29,4 +29,4 @@ Supported descriptors are arithmetic, geometric, powers, Fibonacci, alternating 
 
 Run `npm run validate:puzzles` to check required fields, valid difficulty, three distinct hints, answer mention in the explanation, duplicate entries, and that the sequence and answer match the descriptor. Run `npm test` to run the application tests and puzzle-bank validation.
 
-Practice and Endless puzzles are generated on-device from templates in `src/engine/generator.ts`. The Daily Challenge uses the browser's local date, with #001 anchored to November 2, 2026. Each day contains two Easy puzzles plus one Medium, one Hard, and one Expert puzzle.
+Practice and Endless puzzles are generated on-device from templates in `src/engine/generator.ts`. The Daily Challenge uses the browser's local date, with #001 anchored to November 2, 2026. Each day is ordered Easy, Easy, Medium, Hard, Expert.

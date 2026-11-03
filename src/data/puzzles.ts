@@ -35,9 +35,7 @@ export function dailyIds(date: string): string[] {
     }
     selected.push(...pool.slice(0, dailyMix[level]));
   }
-  return selected
-    .sort((left, right) => hash(date + ':order:' + left.id) - hash(date + ':order:' + right.id))
-    .map((puzzle) => puzzle.id);
+  return selected.map((puzzle) => puzzle.id);
 }
 
 export function isCurrentDailyIds(date: string, ids: string[]): boolean {
