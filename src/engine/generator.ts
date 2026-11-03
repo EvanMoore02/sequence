@@ -46,7 +46,7 @@ const factorial: PuzzleTemplate={id:'factorial',category:'Recursive',difficulty:
  return make('factorial:'+start,'Recursive','Expert',seq,answer,'Factorials','Multiply by consecutive integers; the next multiplier is '+(start+4)+'.',[ 'Look at the ratios between terms.','The multiplier increases by one each time.','Multiply '+seq[3]+' by '+(start+4)+'.']);
 }};
 export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,alternating,differences,doubling,recurrence,factorial];
-export function generatePracticePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
+export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
  const available=templates.filter(t=>difficulty==='All'||t.difficulty===difficulty);
  if(!available.length)throw new Error('No puzzle templates for difficulty '+difficulty);
  const recent=new Set(recentIds);
@@ -57,3 +57,4 @@ export function generatePracticePuzzle(difficulty:PracticeDifficulty,recentIds:s
  const template=available[int(rng,0,available.length-1)];
  return template.generate(rng);
 }
+export const generatePracticePuzzle=generatePuzzle;

@@ -26,3 +26,11 @@ The daily set resets using the browser's local calendar date. Challenge #001 is 
 - Practice session and puzzle history saved separately from daily stats
 
 Practice puzzles are generated locally from typed templates in `src/engine/generator.ts`. To run generator checks, use `npm test`.
+
+- Endless Mode with three lives, escalating difficulty, score bonuses, and a separate personal best
+
+Endless runs start at Easy and move up one level after every three solved puzzles. Each wrong guess costs a life; the run ends at zero lives. First-attempt streaks add 10 points per consecutive solve. Endless state is stored independently in localStorage.
+
+- Endless Mode with three lives, escalating difficulty, score bonuses, and a separate personal best
+
+Endless runs start at Easy and move up one level after every three solved puzzles. Each wrong guess costs a life; the run ends at zero lives. First-attempt streaks add 10 points per consecutive solve. Endless state is stored independently in localStorage.
