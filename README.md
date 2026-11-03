@@ -26,3 +26,5 @@ Open the chart icon in the header to see daily challenge totals, streaks, averag
 Practice and Endless puzzles are generated on-device from typed rule templates in `src/engine/generator.ts`. Run `npm test` for generator, scoring, difficulty, and statistics checks.
 
 Progress, stats, and best scores are saved to this browser's localStorage. The daily set uses the browser's local date. Challenge #001 is anchored to November 2, 2026.
+
+Settings let you choose a light or dark theme and system, reduced, or standard motion. Preferences apply across the app and are saved locally.
