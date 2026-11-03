@@ -356,6 +356,101 @@
         "type": "factorial",
         "start": 1
       }
+    },
+    {
+      "id": "factorial-2",
+      "category": "Recursive",
+      "difficulty": "Expert",
+      "sequence": [
+        2,
+        6,
+        24,
+        120
+      ],
+      "answer": 720,
+      "rule": "Factorials starting at 2",
+      "explanation": "Multiply by 3, 4, and 5; next multiply 120 by 6 to get 720.",
+      "hints": [
+        "Compare each term with the one before it.",
+        "The multiplier rises by one each time.",
+        "Multiply 120 by 6."
+      ],
+      "pattern": {
+        "type": "factorial",
+        "start": 2
+      }
+    },
+    {
+      "id": "growing-gaps-50",
+      "category": "Differences",
+      "difficulty": "Expert",
+      "sequence": [
+        50,
+        55,
+        70,
+        95
+      ],
+      "answer": 130,
+      "rule": "Gaps grow by 10",
+      "explanation": "The gaps are 5, 15, and 25; the next gap is 35, giving 130.",
+      "hints": [
+        "Find the gaps between consecutive terms.",
+        "The gaps increase by the same amount each time.",
+        "The next gap is 35."
+      ],
+      "pattern": {
+        "type": "increasing-difference",
+        "firstDifference": 5,
+        "growth": 10
+      }
+    },
+    {
+      "id": "times-three-minus-two",
+      "category": "Mixed",
+      "difficulty": "Expert",
+      "sequence": [
+        3,
+        7,
+        19,
+        55
+      ],
+      "answer": 163,
+      "rule": "Multiply by 3, then subtract 2",
+      "explanation": "Each term is the previous term times 3 minus 2; 55 \u00d7 3 \u2212 2 = 163.",
+      "hints": [
+        "Look for a repeated multiplication with a small adjustment.",
+        "Multiply by 3, then subtract 2.",
+        "55 \u00d7 3 \u2212 2 gives the next term."
+      ],
+      "pattern": {
+        "type": "multiply-adjust",
+        "factor": 3,
+        "offset": -2
+      }
+    },
+    {
+      "id": "times-three-plus-one",
+      "category": "Mixed",
+      "difficulty": "Expert",
+      "sequence": [
+        4,
+        13,
+        40,
+        121
+      ],
+      "answer": 364,
+      "rule": "Multiply by 3, then add 1",
+      "explanation": "Each term is the previous term times 3 plus 1; 121 \u00d7 3 + 1 = 364.",
+      "hints": [
+        "Compare each pair using multiplication.",
+        "Multiply by 3, then make a small adjustment.",
+        "121 \u00d7 3 + 1 gives the next term."
+      ],
+      "pattern": {
+        "type": "multiply-adjust",
+        "factor": 3,
+        "offset": 1
+      }
     }
   ]
 }
