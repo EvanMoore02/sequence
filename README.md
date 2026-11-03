@@ -1,6 +1,6 @@
 # SEQUENCE
 
-A local, single-player daily number puzzle prototype built with React, TypeScript, Vite, Tailwind CSS, and Lucide.
+A local daily number puzzle prototype built with React, TypeScript, and Vite.
 
 ## Run locally
 
@@ -9,28 +9,20 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. Daily progress and statistics are stored in this browser's localStorage.
+Open the local URL printed by Vite.
 
-## Included
+## Modes
 
-- Five deterministic daily puzzles selected from a curated bank of 15
-- Three attempts per puzzle, progressive hints, explanations, and scoring
-- Resume after refresh and local-device streak tracking
-- Responsive Home, Gameplay, and Results screens
-- Keyboard submission, reduced-motion support, and share/copy results
+- **Daily Challenge:** five date-selected puzzles, three attempts each, hints, scoring, streaks, and results.
+- **Practice:** choose a difficulty and solve generated puzzles with unlimited attempts.
+- **Endless:** three lives, rising difficulty, attempt scoring, first-try streak bonuses, and a personal best.
 
-The daily set resets using the browser's local calendar date. Challenge #001 is anchored to November 2, 2026.
+## Statistics
 
-- Endless Practice with Easy, Medium, Hard, Expert, and All choices
-- Unlimited attempts, optional progressive hints, and rule explanations after solving
-- Practice session and puzzle history saved separately from daily stats
+Open the chart icon in the header to see daily challenge totals, streaks, average score, accuracy, first-try solve rate, score history, and Endless high score. Older local saves remain readable; averages and history begin recording from this update.
 
-Practice puzzles are generated locally from typed templates in `src/engine/generator.ts`. To run generator checks, use `npm test`.
+## Puzzle generation and checks
 
-- Endless Mode with three lives, escalating difficulty, score bonuses, and a separate personal best
+Practice and Endless puzzles are generated on-device from typed rule templates in `src/engine/generator.ts`. Run `npm test` for generator, scoring, difficulty, and statistics checks.
 
-Endless runs start at Easy and move up one level after every three solved puzzles. Each wrong guess costs a life; the run ends at zero lives. First-attempt streaks add 10 points per consecutive solve. Endless state is stored independently in localStorage.
-
-- Endless Mode with three lives, escalating difficulty, score bonuses, and a separate personal best
-
-Endless runs start at Easy and move up one level after every three solved puzzles. Each wrong guess costs a life; the run ends at zero lives. First-attempt streaks add 10 points per consecutive solve. Endless state is stored independently in localStorage.
+Progress, stats, and best scores are saved to this browser's localStorage. The daily set uses the browser's local date. Challenge #001 is anchored to November 2, 2026.
