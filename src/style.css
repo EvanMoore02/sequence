@@ -14,5 +14,3 @@
 
 
 .feedback-link{color:#71836f;text-decoration:none;font-size:10px;font-weight:600}.feedback-link:hover{text-decoration:underline}
-
-.signed-input{flex:1;min-width:0;height:47px;display:flex;align-items:stretch;border:1px solid #dfe2da;border-radius:8px;background:#fff;overflow:hidden}.signed-input:focus-within{border-color:#78927b;box-shadow:0 0 0 3px #e7eee7}.signed-input input{min-width:0;flex:1;border:0!important;border-radius:0!important;box-shadow:none!important;height:45px!important;outline:none;padding:0 10px}.signed-input input:focus{border:0;box-shadow:none}.signed-input-minus{flex:0 0 42px;border:0;border-right:1px solid #e6e7e0;background:#f7f8f5;color:#435447;font-size:20px}.signed-input-minus:hover:not(:disabled){background:#eef2ec}.signed-input-minus:disabled{opacity:.45}

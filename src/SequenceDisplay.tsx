@@ -15,7 +15,7 @@ export default function SequenceDisplay({
   let blankNumber = 0;
 
   return (
-    <div className="numbers">
+    <div className="numbers" role="list" aria-label="Number sequence">
       {terms.map((term, index) => {
         const isBlank = blanks.has(index);
         if (isBlank) blankNumber += 1;
@@ -25,7 +25,8 @@ export default function SequenceDisplay({
           <b
             className={'tile' + (isBlank && !revealed ? ' unknown' : '') + stateClass}
             key={index}
-            aria-label={isBlank && !isRevealed ? 'Missing term ' + blankNumber : undefined}
+            role="listitem"
+            aria-label={isBlank && !isRevealed ? 'Term ' + (index + 1) + ', missing number ' + blankNumber : 'Term ' + (index + 1) + ': ' + term}
           >
             {isRevealed ? term : '?'}
           </b>
