@@ -63,10 +63,6 @@ const lookAndSay: PuzzleTemplate={id:'look-and-say',category:'Look-and-say',gene
  while(terms.length<count+1)terms.push(sayNumber(terms.at(-1)!));
  return make('look-and-say:'+start,'Look-and-say',terms.slice(0,count),terms[count],'Read and describe the previous term','Describe each run of digits in the previous term; the next description gives '+terms[count]+'.',['Read each term aloud as counts and digits.','Each new term describes the runs in the one before it.','The prior term has runs that read as '+terms[count]+'.'],{type:'look-and-say',start});
 }};
-const quadratic: PuzzleTemplate={id:'quadratic',category:'Quadratic equations',generate:rng=>{
- const a=int(rng,2,6),b=int(rng,-9,9),c=int(rng,-15,20),start=int(rng,3,9),count=int(rng,4,5),evaluate=(n:number)=>a*n*n+b*n+c,terms=Array.from({length:count+1},(_,i)=>evaluate(start+i)),linear=b<0?' - '+Math.abs(b)+'n':' + '+b+'n',constant=c<0?' - '+Math.abs(c):' + '+c,formula=a+'n^2'+linear+constant;
- return make('quadratic:'+a+':'+b+':'+c+':'+start+':'+count,'Quadratic equations',terms.slice(0,count),terms[count],'f(n) = '+formula,'Evaluate f(n) = '+formula+' at consecutive values of n; at n = '+(start+count)+', the next term is '+terms[count]+'.',['Compare the first differences; they are not constant.','The second differences stay constant.','Use f(n) = '+formula+' with n = '+(start+count)+'.'],{type:'quadratic',a,b,c,start});
-}};
 const weightedRecurrence: PuzzleTemplate={id:'weighted-recurrence',category:'Weighted recurrence',generate:rng=>{
  const first=int(rng,1,6),second=int(rng,2,9),factor=int(rng,2,3),offset=int(rng,-4,5),count=int(rng,4,5),terms=[first,second];
  while(terms.length<count+1)terms.push(terms.at(-1)!*factor+terms.at(-2)!+offset);
@@ -91,17 +87,19 @@ const primeGaps: PuzzleTemplate={id:'prime-gaps',category:'Number theory',genera
  const choice=int(rng,0,possibilities.length/2-1),start=possibilities[choice*2],firstGap=possibilities[choice*2+1],growth=2,count=6,terms=[start];let gap=firstGap;while(terms.length<count+1){terms.push(terms.at(-1)!+gap);gap+=growth}
  return make('prime-gaps:'+start+':'+firstGap,'Number theory',terms.slice(0,count),terms[count],'Prime numbers with growing gaps','The gaps grow by '+growth+': '+Array.from({length:count},(_,i)=>firstGap+i*growth).join(', ')+'. The next prime is '+terms[count]+'.',['These are not consecutive primes; compare the gaps.','Each gap increases by '+growth+'.','Add '+(firstGap+(count-1)*growth)+' to '+terms[count-1]+' to get '+terms[count]+'.'],{type:'prime-gaps',start,firstGap,growth});
 }};
-export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,quadratic,weightedRecurrence,reverseAdd,collatz,primeGaps];
+export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,weightedRecurrence,reverseAdd,collatz,primeGaps];
 export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
- const recent=new Set(recentIds);
+ const recent=new Set(recentIds.slice(-30));
+ const recentTemplates=new Set(recentIds.slice(-4).map(id=>id.split(':',1)[0]));
  let fallback:GeneratedPuzzle|undefined;
- for(let attempt=0;attempt<Math.max(1000,recentIds.length*2);attempt++){
+ for(let attempt=0;attempt<1000;attempt++){
   const template=templates[int(rng,0,templates.length-1)],puzzle=template.generate(rng);
   if(!puzzle.sequence.every(safe)||!safe(puzzle.answer))continue;
   if(difficulty==='All'&&puzzle.difficulty==='Easy')continue;
   if(difficulty!=='All'&&puzzle.difficulty!==ratingForPlayerDifficulty[difficulty])continue;
+  if(recent.has(puzzle.id))continue;
   if(!fallback)fallback=puzzle;
-  if(!recent.has(puzzle.id))return puzzle;
+  if(!recentTemplates.has(template.id))return puzzle;
  }
  if(fallback)return fallback;
  throw new Error('No puzzle templates can currently generate a '+difficulty+' puzzle.');

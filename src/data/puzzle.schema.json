@@ -311,34 +311,6 @@
         "type": "object",
         "required": [
          "type",
-         "a",
-         "b",
-         "c",
-         "start"
-        ],
-        "properties": {
-         "type": {
-          "const": "quadratic"
-         },
-         "a": {
-          "type": "integer",
-          "minimum": 1
-         },
-         "b": {
-          "type": "integer"
-         },
-         "c": {
-          "type": "integer"
-         },
-         "start": {
-          "type": "integer"
-         }
-        }
-       },
-       {
-        "type": "object",
-        "required": [
-         "type",
          "factor",
          "offset"
         ],

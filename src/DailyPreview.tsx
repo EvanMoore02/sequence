@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { dailyPuzzles } from './engine/dailyGenerator';
+import DailyUnavailable from './DailyUnavailable';
 import './DailyPreview.css';
 
 function localDateAtOffset(offset: number): string {
@@ -53,7 +54,7 @@ export default function DailyPreview({ onBack }: { onBack: () => void }) {
               <ArrowRight size={17} aria-hidden="true" />
             </summary>
             <div className="daily-preview-puzzles">
-              {puzzles.map((puzzle, puzzleIndex) => (
+              {puzzles ? puzzles.map((puzzle, puzzleIndex) => (
                 <article className="daily-preview-puzzle" key={puzzle.id}>
                   <label>Puzzle {puzzleIndex + 1}</label>
                   <div className="daily-preview-numbers" aria-label={'Sequence: ' + puzzle.sequence.join(', ') + '. Answer: ' + puzzle.answer}>
@@ -67,7 +68,7 @@ export default function DailyPreview({ onBack }: { onBack: () => void }) {
                     <ol>{puzzle.hints.map((hint, hintIndex) => <li key={hintIndex}>{hint}</li>)}</ol>
                   </details>
                 </article>
-              ))}
+              )) : <DailyUnavailable />}
             </div>
           </details>
         ))}

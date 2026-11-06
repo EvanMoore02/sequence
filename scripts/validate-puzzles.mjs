@@ -2,14 +2,14 @@ import{readFile}from'node:fs/promises';import{fileURLToPath}from'node:url';impor
 const bankPath=process.argv[2]?resolve(process.cwd(),process.argv[2]):resolve(dirname(fileURLToPath(import.meta.url)),'../src/data/puzzles.json');
 const bank=JSON.parse(await readFile(bankPath,'utf8')),errors=[],levels=new Set(['Easy','Medium','Hard','Expert']),ids=new Set(),signatures=new Set();
 const factorial=n=>{let value=1;for(let i=2;i<=n;i++)value*=i;return value};
-const patternComplexity={arithmetic:0,geometric:1,power:1,fibonacci:2,alternating:3,'increasing-difference':4,'doubling-difference':3,'multiply-adjust':3,factorial:4,prime:5,triangular:4,'look-and-say':5,'alternating-operation':5,quadratic:4,'weighted-recurrence':5,'reverse-add':5,collatz:5,'prime-gaps':5};
+const patternComplexity={arithmetic:0,geometric:1,power:1,fibonacci:2,alternating:3,'increasing-difference':4,'doubling-difference':3,'multiply-adjust':3,factorial:4,prime:5,triangular:4,'look-and-say':5,'alternating-operation':5,'weighted-recurrence':5,'reverse-add':5,collatz:5,'prime-gaps':5};
 const ratingLevel=score=>score<=1?'Easy':score<=3?'Medium':score<=5?'Hard':'Expert';
 function rateDifficulty(sequence,answer,pattern){
  const values=[...sequence,answer];let score=patternComplexity[pattern.type]??0;
  if(sequence.length===4)score++;
  if(pattern.type==='geometric'&&pattern.factor>=3)score++;
  if(pattern.type==='power'&&pattern.exponent===3)score++;
- if(pattern.type==='alternating')score++;if(pattern.type==='quadratic'&&pattern.a>=4)score++;
+ if(pattern.type==='alternating')score++;
  if(pattern.type==='multiply-adjust'){if(pattern.factor>=3)score++;if(pattern.offset!==0)score++}
  const magnitude=Math.max(...values.map(Math.abs));if(magnitude>=1000)score+=2;else if(magnitude>=100)score++;
  if(values.some(value=>value<0))score++;
@@ -34,7 +34,6 @@ case'prime':{const prime=n=>{if(n<2)return false;for(let d=2;d*d<=n;d++)if(n%d==
 case'triangular':return Array.from({length:count},(_,i)=>(q.start+i)*(q.start+i+1)/2);
 case'look-and-say':{const values=[q.start];while(values.length<count){const text=String(values.at(-1));let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}values.push(Number(result))}return values}
 case'alternating-operation':{const values=[s[0]];while(values.length<count){const i=values.length-1;values.push(values.at(-1)*(i%2===0?q.factorA:q.factorB)+(i%2===0?q.offsetA:q.offsetB))}return values}
-case'quadratic':return Array.from({length:count},(_,i)=>q.a*(q.start+i)**2+q.b*(q.start+i)+q.c);
 case'weighted-recurrence':{const values=s.slice(0,2);while(values.length<count)values.push(values.at(-1)*q.factor+values.at(-2)+q.offset);return values}
 case'reverse-add':{const values=[s[0]];while(values.length<count)values.push(values.at(-1)+Number(String(values.at(-1)).split('').reverse().join('')));return values}
 case'collatz':{const values=[q.start];while(values.length<count){const previous=values.at(-1);values.push(previous%2===0?previous/2:previous*3+1)}return values}

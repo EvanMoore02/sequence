@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { AuthoredPuzzle } from '../data/puzzleTypes';
 import type { Puzzle } from '../types';
 import { rateDifficulty } from './difficulty';
-import { dailyIds, dailyPuzzles, hasDailyComposition } from './dailyGenerator';
+import { dailyIds, dailyPuzzles, hasDailyComposition, isWithinDailyCooldown } from './dailyGenerator';
 
 type DailyPuzzle = AuthoredPuzzle | (Puzzle & { pattern: AuthoredPuzzle['pattern']; difficultyScore: number });
 
@@ -78,8 +78,6 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
       while (terms.length < count) { const index = terms.length - 1; terms.push(terms.at(-1)! * (index % 2 === 0 ? pattern.factorA : pattern.factorB) + (index % 2 === 0 ? pattern.offsetA : pattern.offsetB)); }
       return terms;
     }
-    case 'quadratic':
-      return Array.from({ length: count }, (_, index) => pattern.a * (pattern.start + index) ** 2 + pattern.b * (pattern.start + index) + pattern.c);
     case 'weighted-recurrence': {
       const terms = sequence.slice(0, 2);
       while (terms.length < count) terms.push(terms.at(-1)! * pattern.factor + terms.at(-2)! + pattern.offset);
@@ -138,34 +136,77 @@ describe('generated Daily Challenge', () => {
     const date = '2026-11-03';
     const first = dailyPuzzles(date);
     const second = dailyPuzzles(date);
-    expect(first.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
-    expect(dailyIds(date)).toEqual(first.map((puzzle) => puzzle.id));
-    expect(second.map((puzzle) => puzzle.id)).toEqual(first.map((puzzle) => puzzle.id));
-    expect(hasDailyComposition(dailyIds(date))).toBe(true);
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first!.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
+    expect(dailyIds(date)).toEqual(first!.map((puzzle) => puzzle.id));
+    expect(second!.map((puzzle) => puzzle.id)).toEqual(first!.map((puzzle) => puzzle.id));
+    expect(hasDailyComposition(dailyIds(date)!)).toBe(true);
   });
 
   it('derives every displayed answer from its declared rule and provides usable clues', () => {
     for (let day = 0; day < 400; day += 1) {
-      for (const puzzle of dailyPuzzles(dateOffset('2026-11-02', day))) checkPuzzle(puzzle);
+      const lineup = dailyPuzzles(dateOffset('2026-11-02', day));
+      expect(lineup, 'no lineup for ' + dateOffset('2026-11-02', day)).not.toBeNull();
+      for (const puzzle of lineup!) checkPuzzle(puzzle);
     }
   });
 
-  it('shares no puzzle IDs between adjacent days across leap and daylight-saving dates', () => {
+  it('never repeats an exact puzzle within any rolling 15-date window', () => {
     const signature = (puzzle: DailyPuzzle) => JSON.stringify([puzzle.sequence, puzzle.answer]);
-    let previousIds = new Set(dailyIds('2026-11-01'));
-    let previousSignatures = new Set(dailyPuzzles('2026-11-01').map(signature));
+    const recent: Set<string>[] = [];
+    for (let day = -14; day < 0; day += 1) {
+      const lineup = dailyPuzzles(dateOffset('2026-11-02', day));
+      expect(lineup, 'no lineup for ' + dateOffset('2026-11-02', day)).not.toBeNull();
+      recent.push(new Set(lineup!.map(signature)));
+    }
     for (let day = 0; day < 3653; day += 1) {
       const date = dateOffset('2026-11-02', day);
       const current = dailyPuzzles(date);
-      const currentIds = current.map((puzzle) => puzzle.id);
-      const currentSignatures = current.map(signature);
-      expect(currentIds).toHaveLength(5);
-      expect(new Set(currentIds).size).toBe(5);
+      expect(current).not.toBeNull();
+      const currentSignatures = current!.map(signature);
+      expect(current).toHaveLength(5);
       expect(new Set(currentSignatures).size).toBe(5);
-      expect(currentIds.filter((id) => previousIds.has(id))).toEqual([]);
-      expect(currentSignatures.filter((value) => previousSignatures.has(value))).toEqual([]);
-      previousIds = new Set(currentIds);
-      previousSignatures = new Set(currentSignatures);
+      const recentSignatures = new Set(recent.flatMap((signatures) => [...signatures]));
+      expect(currentSignatures.filter((value) => recentSignatures.has(value))).toEqual([]);
+      recent.push(new Set(currentSignatures));
+      if (recent.length > 14) recent.shift();
     }
+  });
+
+  it('allows a puzzle to become eligible for reuse exactly 15 dates later', () => {
+    expect(isWithinDailyCooldown(12, 26)).toBe(true);
+    expect(isWithinDailyCooldown(12, 27)).toBe(false);
+    expect(isWithinDailyCooldown(27, 12)).toBe(false);
+  });
+
+  it('uses different rule types from the immediately preceding Daily lineup', () => {
+    const first = dailyPuzzles(dateOffset('2026-11-02', -14));
+    expect(first).not.toBeNull();
+    let previousPatterns = new Set(first!.map((puzzle) => puzzle.pattern.type));
+    for (let day = -13; day < 400; day += 1) {
+      const lineup = dailyPuzzles(dateOffset('2026-11-02', day));
+      expect(lineup).not.toBeNull();
+      const currentPatterns = lineup!.map((puzzle) => puzzle.pattern.type);
+      expect(currentPatterns.filter((pattern) => previousPatterns.has(pattern))).toEqual([]);
+      previousPatterns = new Set(currentPatterns);
+    }
+  });
+
+  it('keeps a date lineup stable regardless of nearby-date request order', async () => {
+    vi.resetModules();
+    const firstGenerator = await import('./dailyGenerator');
+    const futureFirst = firstGenerator.dailyIds('2026-11-20');
+    const pastSecond = firstGenerator.dailyIds('2026-10-01');
+
+    vi.resetModules();
+    const secondGenerator = await import('./dailyGenerator');
+    const pastFirst = secondGenerator.dailyIds('2026-10-01');
+    const futureSecond = secondGenerator.dailyIds('2026-11-20');
+
+    expect(futureFirst).not.toBeNull();
+    expect(pastSecond).not.toBeNull();
+    expect(pastFirst).toEqual(pastSecond);
+    expect(futureSecond).toEqual(futureFirst);
   });
 });

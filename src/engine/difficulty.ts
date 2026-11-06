@@ -28,7 +28,6 @@ const patternComplexity: Record<AnswerPattern['type'], number> = {
   triangular: 4,
   'look-and-say': 5,
   'alternating-operation': 5,
-  quadratic: 4,
   'weighted-recurrence': 5,
   'reverse-add': 5,
   collatz: 5,
@@ -83,7 +82,6 @@ export function rateDifficulty(sequence: number[], answer: number, pattern: Answ
   if (pattern.type === 'geometric' && pattern.factor >= 3) score += 1;
   if (pattern.type === 'power' && pattern.exponent === 3) score += 1;
   if (pattern.type === 'alternating') score += 1;
-  if (pattern.type === 'quadratic' && pattern.a >= 4) score += 1;
   if (pattern.type === 'multiply-adjust') {
     if (pattern.factor >= 3) score += 1;
     if (pattern.offset !== 0) score += 1;
