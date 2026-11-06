@@ -1,10 +1,10 @@
-import type { Puzzle } from '../types';
+import type { PlayerDifficulty } from './difficulty';
 
-export type EndlessDifficulty = Puzzle['difficulty'];
-const levels: EndlessDifficulty[] = ['Easy', 'Medium', 'Hard', 'Expert'];
+export type EndlessDifficulty = PlayerDifficulty;
+const levels: EndlessDifficulty[] = ['Easy', 'Medium', 'Hard'];
 
 export function difficultyForSolvedCount(solved: number): EndlessDifficulty {
-  return levels[Math.min(3, Math.floor(Math.max(0, solved) / 3))];
+  return levels[Math.min(2, Math.floor(Math.max(0, solved) / 3))];
 }
 
 export function endlessPuzzlePoints(attempts: number, hints: number): number {

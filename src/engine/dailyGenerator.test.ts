@@ -56,10 +56,41 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
       };
       return Array.from({ length: count }, (_, index) => factorial(pattern.start + index));
     }
+    case 'prime': {
+      const isPrime = (value: number) => { if (value < 2) return false; for (let divisor = 2; divisor * divisor <= value; divisor += 1) if (value % divisor === 0) return false; return true; };
+      const terms = [pattern.start];
+      while (terms.length < count) { let next = terms.at(-1)! + 1; while (!isPrime(next)) next += 1; terms.push(next); }
+      return terms;
+    }
+    case 'triangular':
+      return Array.from({ length: count }, (_, index) => (pattern.start + index) * (pattern.start + index + 1) / 2);
+    case 'look-and-say': {
+      const terms: number[] = [pattern.start];
+      while (terms.length < count) {
+        const text = String(terms.at(-1)!); let result = '';
+        for (let index = 0; index < text.length;) { let end = index + 1; while (end < text.length && text[end] === text[index]) end += 1; result += String(end - index) + text[index]; index = end; }
+        terms.push(Number(result));
+      }
+      return terms;
+    }
+    case 'alternating-operation': {
+      const terms = [sequence[0]];
+      while (terms.length < count) { const index = terms.length - 1; terms.push(terms.at(-1)! * (index % 2 === 0 ? pattern.factorA : pattern.factorB) + (index % 2 === 0 ? pattern.offsetA : pattern.offsetB)); }
+      return terms;
+    }
+    case 'quadratic':
+      return Array.from({ length: count }, (_, index) => pattern.a * (pattern.start + index) ** 2 + pattern.b * (pattern.start + index) + pattern.c);
+    case 'weighted-recurrence': {
+      const terms = sequence.slice(0, 2);
+      while (terms.length < count) terms.push(terms.at(-1)! * pattern.factor + terms.at(-2)! + pattern.offset);
+      return terms;
+    }
   }
 }
 
 function checkPuzzle(puzzle: DailyPuzzle) {
+  expect(puzzle.pattern.type).not.toBe('alternating');
+  expect(puzzle.pattern.type).not.toBe('alternating-operation');
   expect(deriveTerms(puzzle)).toEqual([...puzzle.sequence, puzzle.answer]);
   expect([...puzzle.sequence, puzzle.answer].every(Number.isSafeInteger)).toBe(true);
   expect([...puzzle.sequence, puzzle.answer].every((value) => Math.abs(value) <= 1_000_000)).toBe(true);
@@ -87,7 +118,7 @@ describe('generated Daily Challenge', () => {
     const date = '2026-11-03';
     const first = dailyPuzzles(date);
     const second = dailyPuzzles(date);
-    expect(first.map((puzzle) => puzzle.difficulty)).toEqual(['Easy', 'Easy', 'Medium', 'Hard', 'Expert']);
+    expect(first.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
     expect(dailyIds(date)).toEqual(first.map((puzzle) => puzzle.id));
     expect(second.map((puzzle) => puzzle.id)).toEqual(first.map((puzzle) => puzzle.id));
     expect(hasDailyComposition(dailyIds(date))).toBe(true);

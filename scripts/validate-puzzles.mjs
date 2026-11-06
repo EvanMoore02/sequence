@@ -2,14 +2,14 @@ import{readFile}from'node:fs/promises';import{fileURLToPath}from'node:url';impor
 const bankPath=process.argv[2]?resolve(process.cwd(),process.argv[2]):resolve(dirname(fileURLToPath(import.meta.url)),'../src/data/puzzles.json');
 const bank=JSON.parse(await readFile(bankPath,'utf8')),errors=[],levels=new Set(['Easy','Medium','Hard','Expert']),ids=new Set(),signatures=new Set();
 const factorial=n=>{let value=1;for(let i=2;i<=n;i++)value*=i;return value};
-const patternComplexity={arithmetic:0,geometric:1,power:1,fibonacci:2,alternating:3,'increasing-difference':4,'doubling-difference':3,'multiply-adjust':3,factorial:4};
+const patternComplexity={arithmetic:0,geometric:1,power:1,fibonacci:2,alternating:3,'increasing-difference':4,'doubling-difference':3,'multiply-adjust':3,factorial:4,prime:5,triangular:4,'look-and-say':5,'alternating-operation':5,quadratic:4,'weighted-recurrence':5};
 const ratingLevel=score=>score<=1?'Easy':score<=3?'Medium':score<=5?'Hard':'Expert';
 function rateDifficulty(sequence,answer,pattern){
  const values=[...sequence,answer];let score=patternComplexity[pattern.type]??0;
  if(sequence.length===4)score++;
  if(pattern.type==='geometric'&&pattern.factor>=3)score++;
  if(pattern.type==='power'&&pattern.exponent===3)score++;
- if(pattern.type==='alternating')score++;
+ if(pattern.type==='alternating')score++;if(pattern.type==='quadratic'&&pattern.a>=4)score++;
  if(pattern.type==='multiply-adjust'){if(pattern.factor>=3)score++;if(pattern.offset!==0)score++}
  const magnitude=Math.max(...values.map(Math.abs));if(magnitude>=1000)score+=2;else if(magnitude>=100)score++;
  if(values.some(value=>value<0))score++;
@@ -30,6 +30,14 @@ case'increasing-difference':{const values=[s[0]];let gap=q.firstDifference;while
 case'doubling-difference':{const values=[s[0]];let gap=q.firstDifference;while(values.length<count){values.push(values.at(-1)+gap);gap*=2}return values}
 case'multiply-adjust':{const values=[s[0]];while(values.length<count)values.push(values.at(-1)*q.factor+q.offset);return values}
 case'factorial':return Array.from({length:count},(_,i)=>factorial(q.start+i));
+case'prime':{const prime=n=>{if(n<2)return false;for(let d=2;d*d<=n;d++)if(n%d===0)return false;return true};const values=[q.start];while(values.length<count){let next=values.at(-1)+1;while(!prime(next))next++;values.push(next)}return values}
+case'triangular':return Array.from({length:count},(_,i)=>(q.start+i)*(q.start+i+1)/2);
+case'look-and-say':{const values=[q.start];while(values.length<count){const text=String(values.at(-1));let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}values.push(Number(result))}return values}
+case'alternating-operation':{const values=[s[0]];while(values.length<count){const i=values.length-1;values.push(values.at(-1)*(i%2===0?q.factorA:q.factorB)+(i%2===0?q.offsetA:q.offsetB))}return values}
+case'quadratic':return Array.from({length:count},(_,i)=>q.a*(q.start+i)**2+q.b*(q.start+i)+q.c);
+case'weighted-recurrence':{const values=s.slice(0,2);while(values.length<count)values.push(values.at(-1)*q.factor+values.at(-2)+q.offset);return values}
+
+
 default:throw Error('unsupported pattern type '+q.type)}}
 if(!bank||!Array.isArray(bank.puzzles)||bank.puzzles.length===0)errors.push('Bank must contain at least one puzzle.');
 for(const [index,p]of(bank?.puzzles||[]).entries()){const name='Puzzle '+(index+1)+(p?.id?' ('+p.id+')':'');
@@ -37,7 +45,7 @@ if(!p||typeof p!=='object'){errors.push(name+': expected an object.');continue}
 if(typeof p.id!=='string'||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.id))errors.push(name+': id must be a lowercase slug.');
 else if(ids.has(p.id))errors.push(name+': duplicate id.');else ids.add(p.id);
 if(typeof p.category!=='string'||!p.category.trim())errors.push(name+': category is required.');
-if(!levels.has(p.difficulty))errors.push(name+': difficulty must be Easy, Medium, Hard, or Expert.');
+if(!levels.has(p.difficulty))errors.push(name+': difficulty must be a rated tier: Easy, Medium, Hard, or Expert.');
 if(!Array.isArray(p.sequence)||p.sequence.length<4||p.sequence.length>6||!p.sequence.every(Number.isSafeInteger))errors.push(name+': sequence must contain 4–6 safe integers.');
 if(!Number.isSafeInteger(p.answer))errors.push(name+': answer must be a safe integer.');
 if(typeof p.rule!=='string'||p.rule.trim().length<3)errors.push(name+': rule is required.');
@@ -50,5 +58,5 @@ if(Array.isArray(p.sequence)&&Number.isSafeInteger(p.answer)&&p.pattern?.type&&p
 if(Array.isArray(p.sequence)&&p.sequence.length>=4&&Number.isSafeInteger(p.answer)&&p.pattern?.type){try{const terms=derive(p);if(!terms.slice(0,p.sequence.length).every((value,i)=>value===p.sequence[i])||terms.at(-1)!==p.answer)errors.push(name+': sequence or answer does not match its declared rule.');if(!terms.every(Number.isSafeInteger))errors.push(name+': declared rule generates an unsafe integer.')}catch(error){errors.push(name+': '+error.message)}}
 const signature=JSON.stringify([p.sequence,p.answer]);if(signatures.has(signature))errors.push(name+': duplicate sequence and answer.');signatures.add(signature);
 }
-const requiredDailyMix={Easy:2,Medium:1,Hard:1,Expert:1};for(const [difficulty,minimum]of Object.entries(requiredDailyMix)){const count=(bank?.puzzles||[]).filter(p=>p?.difficulty===difficulty).length;if(count<minimum)errors.push('Daily puzzle bank needs at least '+minimum+' '+difficulty+' puzzle'+(minimum===1?'':'s')+' to fill every daily challenge; found '+count+'.')}
+const requiredDailyMix={Medium:1,Hard:2,Expert:2};for(const [difficulty,minimum]of Object.entries(requiredDailyMix)){const count=(bank?.puzzles||[]).filter(p=>p?.difficulty===difficulty).length;if(count<minimum)errors.push('Daily puzzle bank needs at least '+minimum+' '+difficulty+' puzzle'+(minimum===1?'':'s')+' to fill every daily challenge; found '+count+'.')}
 if(errors.length){console.error('Puzzle bank validation failed:');for(const error of errors)console.error(' - '+error);process.exitCode=1}else console.log('Validated '+bank.puzzles.length+' puzzles: fields, rubric-rated difficulty, three hints, explanations, uniqueness, and rule-derived answers are consistent.');

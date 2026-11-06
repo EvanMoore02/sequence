@@ -4,7 +4,7 @@ import type { Puzzle } from '../types';
 import { templates, type GeneratedPuzzle } from './generator';
 
 const levels: Puzzle['difficulty'][] = ['Easy', 'Medium', 'Hard', 'Expert'];
-const dailyMix: Record<Puzzle['difficulty'], number> = { Easy: 2, Medium: 1, Hard: 1, Expert: 1 };
+const dailyMix: Record<Puzzle['difficulty'], number> = { Easy: 0, Medium: 1, Hard: 2, Expert: 2 };
 const dailyAnchor = Date.UTC(2026, 10, 2);
 const millisecondsPerDay = 86_400_000;
 const cache = new Map<string, DailyPuzzle[]>();
@@ -32,6 +32,7 @@ function makePools(): Pools {
   };
   const signatures = new Set<string>();
   const add = (puzzle: DailyPuzzle) => {
+    if (puzzle.pattern.type === 'alternating' || puzzle.pattern.type === 'alternating-operation') return;
     const signature = JSON.stringify([puzzle.sequence, puzzle.answer]);
     if (signatures.has(signature)) return;
     signatures.add(signature);
@@ -50,7 +51,8 @@ function makePools(): Pools {
     [...collected[level].values()].sort((left, right) => left.id.localeCompare(right.id)),
   ])) as Pools;
   for (const level of levels) {
-    const minimum = dailyMix[level] === 2 ? 4 : 2;
+    const count = dailyMix[level];
+    const minimum = count === 0 ? 0 : count === 1 ? 2 : 4;
     if (result[level].length < minimum) {
       throw new Error('Daily generator needs at least ' + minimum + ' unique ' + level + ' puzzles to avoid adjacent-day repeats.');
     }
@@ -76,12 +78,15 @@ export function dailyPuzzles(date: string): DailyPuzzle[] {
   if (cached) return cached;
   const offset = dayIndex(date);
   const available = pools ??= makePools();
-  const easy = available.Easy;
-  const easyStart = positiveModulo(offset * dailyMix.Easy, easy.length);
+  const select = (level: Puzzle['difficulty'], count: number) => {
+    const pool = available[level];
+    const start = positiveModulo(offset * count, pool.length);
+    return Array.from({ length: count }, (_, index) => pool[(start + index) % pool.length]);
+  };
   const selected = [
-    easy[easyStart],
-    easy[(easyStart + 1) % easy.length],
-    ...levels.slice(1).map((level) => available[level][positiveModulo(offset, available[level].length)]),
+    ...select('Medium', dailyMix.Medium),
+    ...select('Hard', dailyMix.Hard),
+    ...select('Expert', dailyMix.Expert),
   ];
   cache.set(date, selected);
   return selected;
@@ -97,7 +102,7 @@ export function hasDailyComposition(ids: string[]): boolean {
   const byId = new Map(levels.flatMap((level) => available[level]).map((puzzle) => [puzzle.id, puzzle]));
   const puzzlesForIds = ids.map((id) => byId.get(id));
   if (puzzlesForIds.some((puzzle) => !puzzle)) return false;
-  return puzzlesForIds.every((puzzle, index) => puzzle!.difficulty === ['Easy', 'Easy', 'Medium', 'Hard', 'Expert'][index]);
+  return puzzlesForIds.every((puzzle, index) => puzzle!.difficulty === ['Medium', 'Hard', 'Hard', 'Expert', 'Expert'][index]);
 }
 
 export function isCurrentDailyIds(date: string, ids: string[]): boolean {

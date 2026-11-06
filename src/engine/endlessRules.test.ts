@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { difficultyForSolvedCount, endlessPuzzlePoints } from './endlessRules';
 
 describe('Endless rules', () => {
-  it('raises difficulty after each three successful puzzles and caps at Expert', () => {
+  it('raises difficulty after each three successful puzzles and caps at Hard', () => {
     expect([0, 1, 2, 3, 5, 6, 8, 9, 50].map(difficultyForSolvedCount)).toEqual([
-      'Easy', 'Easy', 'Easy', 'Medium', 'Medium', 'Hard', 'Hard', 'Expert', 'Expert',
+      'Easy', 'Easy', 'Easy', 'Medium', 'Medium', 'Hard', 'Hard', 'Hard', 'Hard',
     ]);
   });
 

@@ -1,12 +1,15 @@
 import type {Puzzle} from '../types';
 import type {AnswerPattern} from '../data/puzzleTypes';
-import {rateDifficulty} from './difficulty';
+import {rateDifficulty, ratingForPlayerDifficulty, type PlayerDifficulty} from './difficulty';
 
-export type PracticeDifficulty=Puzzle['difficulty']|'All';
+export type PracticeDifficulty=PlayerDifficulty|'All';
 export type GeneratedPuzzle=Puzzle&{templateId:string;difficultyScore:number;pattern:AnswerPattern};
 export type PuzzleTemplate={id:string;category:string;generate:(rng:()=>number)=>GeneratedPuzzle};
 const int=(rng:()=>number,min:number,max:number)=>min+Math.floor(rng()*(max-min+1));
 const safe=(n:number)=>Number.isSafeInteger(n)&&Math.abs(n)<=1_000_000;
+const isPrime=(n:number)=>{if(n<2)return false;for(let d=2;d*d<=n;d++)if(n%d===0)return false;return true};
+const nextPrime=(n:number)=>{let value=n+1;while(!isPrime(value))value++;return value};
+const sayNumber=(n:number)=>{const text=String(n);let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}return Number(result)};
 function make(id:string,category:string,sequence:number[],answer:number,rule:string,explanation:string,hints:[string,string,string],pattern:AnswerPattern):GeneratedPuzzle{
  const templateId=id.split(':')[0],rating=rateDifficulty(sequence,answer,pattern);
  return {id,templateId,category,difficulty:rating.difficulty,difficultyScore:rating.score,pattern,sequence,answer,rule,explanation,hints};
@@ -27,10 +30,6 @@ const fibonacci: PuzzleTemplate={id:'fibonacci',category:'Recursive',generate:rn
  const a=int(rng,1,3),b=int(rng,a,5),seq=[a,b];while(seq.length<5)seq.push(seq.at(-1)!+seq.at(-2)!);const answer=seq[4]+seq[3];
  return make('fibonacci:'+a+':'+b,'Recursive',seq,answer,'Add the previous two','Each term is the sum of the previous two terms: '+seq[3]+' + '+seq[4]+' = '+answer+'.',[ 'Look back more than one position.','Each new term combines the two before it.','Add '+seq[3]+' and '+seq[4]+'.'],{type:'fibonacci'});
 }};
-const alternating: PuzzleTemplate={id:'alternating',category:'Alternating',generate:rng=>{
- const a=int(rng,1,8),b=int(rng,5,20),da=int(rng,1,4),db=int(rng,2,8),seq=[a,b,a+da,b+db,a+2*da],answer=b+2*db;
- return make('alternating:'+a+':'+b+':'+da+':'+db,'Alternating',seq,answer,'Two alternating sequences','Odd positions increase by '+da+'; even positions increase by '+db+', so the next term is '+answer+'.',[ 'Try splitting the positions into two groups.','Odd and even positions follow separate patterns.','The even-position values increase by '+db+'.'],{type:'alternating',oddStep:da,evenStep:db});
-}};
 const differences: PuzzleTemplate={id:'differences',category:'Differences',generate:rng=>{
  const start=int(rng,-10,20),first=int(rng,-4,8),growth=int(rng,1,4),seq=[start];for(let i=0;i<4;i++)seq.push(seq.at(-1)!+first+i*growth);const answer=seq[4]+first+4*growth;
  return make('differences:'+start+':'+first+':'+growth,'Differences',seq,answer,'Differences increase by '+growth,'The first differences increase by '+growth+' each time; the next gap is '+(first+4*growth)+', giving '+answer+'.',[ 'Compare the gaps between consecutive terms.','The gaps themselves change regularly.','The next gap is '+(first+4*growth)+'.'],{type:'increasing-difference',firstDifference:first,growth});
@@ -40,21 +39,47 @@ const doubling: PuzzleTemplate={id:'doubling-gaps',category:'Differences',genera
  return make('doubling-gaps:'+start+':'+step,'Differences',seq,answer,'Double each difference','The gaps are '+step+', '+2*step+', and '+4*step+'; next add '+8*step+' to get '+answer+'.',[ 'Look at the gaps between terms.','Each gap is twice the one before it.','The next gap is '+8*step+'.'],{type:'doubling-difference',firstDifference:step});
 }};
 const recurrence: PuzzleTemplate={id:'multiply-adjust',category:'Mixed',generate:rng=>{
- const factor=int(rng,2,3),offset=int(rng,-2,2),start=int(rng,1,6),seq=[start];while(seq.length<4)seq.push(seq.at(-1)!*factor+offset);const answer=seq[3]*factor+offset;
- return make('multiply-adjust:'+start+':'+factor+':'+offset,'Mixed',seq,answer,'Multiply by '+factor+' then '+(offset<0?'subtract '+Math.abs(offset):'add '+offset),'Multiply each term by '+factor+(offset<0?' and subtract '+Math.abs(offset):' and add '+offset)+', giving '+answer+'.',[ 'Check whether multiplication is involved.','A small adjustment follows the multiplication.','Multiply by '+factor+(offset<0?' and subtract '+Math.abs(offset):' and add '+offset)+', giving '+answer+'.'],{type:'multiply-adjust',factor,offset});
+ const factor=int(rng,2,4),offset=int(rng,-9,9),start=int(rng,1,8),count=int(rng,4,5),seq=[start];while(seq.length<count)seq.push(seq.at(-1)!*factor+offset);const answer=seq.at(-1)!*factor+offset;
+ return make('multiply-adjust:'+start+':'+factor+':'+offset+':'+count,'Mixed',seq,answer,'Multiply by '+factor+' then '+(offset<0?'subtract '+Math.abs(offset):'add '+offset),'Multiply each term by '+factor+(offset<0?' and subtract '+Math.abs(offset):' and add '+offset)+', giving '+answer+'.',[ 'Check whether multiplication is involved.','A small adjustment follows the multiplication.','Multiply by '+factor+(offset<0?' and subtract '+Math.abs(offset):' and add '+offset)+', giving '+answer+'.'],{type:'multiply-adjust',factor,offset});
 }};
 const factorial: PuzzleTemplate={id:'factorial',category:'Recursive',generate:rng=>{
  const start=int(rng,1,3),fact=(n:number)=>{let x=1;for(let i=2;i<=n;i++)x*=i;return x},seq=Array.from({length:4},(_,i)=>fact(start+i)),answer=fact(start+4);
  return make('factorial:'+start,'Recursive',seq,answer,'Factorials','Multiply by consecutive integers; the next multiplier is '+(start+4)+', giving '+answer+'.',[ 'Look at the ratios between terms.','The multiplier increases by one each time.','Multiply '+seq[3]+' by '+(start+4)+'.'],{type:'factorial',start});
 }};
-export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,alternating,differences,doubling,recurrence,factorial];
+const primes: PuzzleTemplate={id:'primes',category:'Number theory',generate:rng=>{
+ const starts=[2,3,5,7,11,13,17,19,23,29],start=starts[int(rng,0,starts.length-1)],count=int(rng,4,5),terms=[start];
+ while(terms.length<count+1)terms.push(nextPrime(terms.at(-1)!));
+ const sequence=terms.slice(0,count),answer=terms[count];
+ return make('primes:'+start+':'+count,'Number theory',sequence,answer,'Consecutive prime numbers','Each term is the next prime; the prime after '+sequence.at(-1)+' is '+answer+'.',['Check which numbers have no divisors other than 1 and themselves.','The gaps change, but every term is prime.','Find the next prime after '+sequence.at(-1)+'.'],{type:'prime',start});
+}};
+const triangular: PuzzleTemplate={id:'triangular',category:'Figurate numbers',generate:rng=>{
+ const start=int(rng,3,15),count=int(rng,4,5),value=(n:number)=>n*(n+1)/2,terms=Array.from({length:count+1},(_,i)=>value(start+i));
+ return make('triangular:'+start+':'+count,'Figurate numbers',terms.slice(0,count),terms[count],'Triangular numbers','Add consecutive integers to build each term; the next is '+(start+count)+' x '+(start+count+1)+' / 2 = '+terms[count]+'.',['Compare the differences between terms.','The gaps increase by one each time.','Add the next counting number, '+(start+count)+'.'],{type:'triangular',start});
+}};
+const lookAndSay: PuzzleTemplate={id:'look-and-say',category:'Look-and-say',generate:rng=>{
+ const start=int(rng,1,2) as 1|2,count=4,terms:number[]=[start];
+ while(terms.length<count+1)terms.push(sayNumber(terms.at(-1)!));
+ return make('look-and-say:'+start,'Look-and-say',terms.slice(0,count),terms[count],'Read and describe the previous term','Describe each run of digits in the previous term; the next description gives '+terms[count]+'.',['Read each term aloud as counts and digits.','Each new term describes the runs in the one before it.','The prior term has runs that read as '+terms[count]+'.'],{type:'look-and-say',start});
+}};
+const quadratic: PuzzleTemplate={id:'quadratic',category:'Quadratic equations',generate:rng=>{
+ const a=int(rng,2,6),b=int(rng,-9,9),c=int(rng,-15,20),start=int(rng,3,9),count=int(rng,4,5),evaluate=(n:number)=>a*n*n+b*n+c,terms=Array.from({length:count+1},(_,i)=>evaluate(start+i)),linear=b<0?' - '+Math.abs(b)+'n':' + '+b+'n',constant=c<0?' - '+Math.abs(c):' + '+c,formula=a+'n^2'+linear+constant;
+ return make('quadratic:'+a+':'+b+':'+c+':'+start+':'+count,'Quadratic equations',terms.slice(0,count),terms[count],'f(n) = '+formula,'Evaluate f(n) = '+formula+' at consecutive values of n; at n = '+(start+count)+', the next term is '+terms[count]+'.',['Compare the first differences; they are not constant.','The second differences stay constant.','Use f(n) = '+formula+' with n = '+(start+count)+'.'],{type:'quadratic',a,b,c,start});
+}};
+const weightedRecurrence: PuzzleTemplate={id:'weighted-recurrence',category:'Weighted recurrence',generate:rng=>{
+ const first=int(rng,1,6),second=int(rng,2,9),factor=int(rng,2,3),offset=int(rng,-4,5),count=int(rng,4,5),terms=[first,second];
+ while(terms.length<count+1)terms.push(terms.at(-1)!*factor+terms.at(-2)!+offset);
+ const adjustment=offset<0?' - '+Math.abs(offset):' + '+offset;
+ return make('weighted-recurrence:'+first+':'+second+':'+factor+':'+offset+':'+count,'Weighted recurrence',terms.slice(0,count),terms[count],'Multiply the previous term and combine the term before it','Each new term is '+factor+' times the previous term plus the term before that'+(offset===0?'':adjustment)+'; the next term is '+terms[count]+'.',['Each term depends on the two terms before it.','Use both earlier values, not just one.','Calculate '+factor+' x '+terms[count-1]+' + '+terms[count-2]+(offset<0?' - '+Math.abs(offset):' + '+offset)+' to get '+terms[count]+'.'],{type:'weighted-recurrence',factor,offset});
+}};
+export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,quadratic,weightedRecurrence];
 export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
  const recent=new Set(recentIds);
  let fallback:GeneratedPuzzle|undefined;
  for(let attempt=0;attempt<Math.max(1000,recentIds.length*2);attempt++){
   const template=templates[int(rng,0,templates.length-1)],puzzle=template.generate(rng);
   if(!puzzle.sequence.every(safe)||!safe(puzzle.answer))continue;
-  if(difficulty!=='All'&&puzzle.difficulty!==difficulty)continue;
+  if(difficulty==='All'&&puzzle.difficulty==='Easy')continue;
+  if(difficulty!=='All'&&puzzle.difficulty!==ratingForPlayerDifficulty[difficulty])continue;
   if(!fallback)fallback=puzzle;
   if(!recent.has(puzzle.id))return puzzle;
  }
