@@ -17,6 +17,9 @@ function validate(p:ReturnType<typeof generatePracticePuzzle>){
  case'look-and-say':{const describe=(n:number)=>{const text=String(n);let out='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;out+=String(end-i)+text[i];i=end}return Number(out)};expect(all[0]).toBe(Number(parts[1]));expect(all.slice(1).every((v,i)=>v===describe(all[i]))).toBe(true);break}
  case'quadratic':{const a=Number(parts[1]),b=Number(parts[2]),c=Number(parts[3]),start=Number(parts[4]);expect(all.every((v,i)=>v===a*(start+i)**2+b*(start+i)+c)).toBe(true);break}
  case'weighted-recurrence':{const factor=Number(parts[3]),offset=Number(parts[4]);expect(all.slice(2).every((v,i)=>v===all[i+1]*factor+all[i]+offset)).toBe(true);break}
+ case'reverse-add':expect(all.slice(1).every((v,i)=>v===all[i]+Number(String(all[i]).split('').reverse().join('')))).toBe(true);break;
+ case'collatz':expect(all.slice(1).every((v,i)=>v===(all[i]%2===0?all[i]/2:all[i]*3+1))).toBe(true);expect(all.slice(0,-2).some(v=>v%2===0)).toBe(true);expect(all.slice(0,-2).some(v=>v%2!==0)).toBe(true);break;
+ case'prime-gaps':{const gap=Number(parts[2]),growth=2;expect(all.every((v)=>{if(v<2)return false;for(let d=2;d*d<=v;d++)if(v%d===0)return false;return true})).toBe(true);expect(all.slice(1).every((v,i)=>v===all[i]+gap+i*growth)).toBe(true);break}
 
 
  }

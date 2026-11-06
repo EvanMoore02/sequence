@@ -2,7 +2,7 @@ import{readFile}from'node:fs/promises';import{fileURLToPath}from'node:url';impor
 const bankPath=process.argv[2]?resolve(process.cwd(),process.argv[2]):resolve(dirname(fileURLToPath(import.meta.url)),'../src/data/puzzles.json');
 const bank=JSON.parse(await readFile(bankPath,'utf8')),errors=[],levels=new Set(['Easy','Medium','Hard','Expert']),ids=new Set(),signatures=new Set();
 const factorial=n=>{let value=1;for(let i=2;i<=n;i++)value*=i;return value};
-const patternComplexity={arithmetic:0,geometric:1,power:1,fibonacci:2,alternating:3,'increasing-difference':4,'doubling-difference':3,'multiply-adjust':3,factorial:4,prime:5,triangular:4,'look-and-say':5,'alternating-operation':5,quadratic:4,'weighted-recurrence':5};
+const patternComplexity={arithmetic:0,geometric:1,power:1,fibonacci:2,alternating:3,'increasing-difference':4,'doubling-difference':3,'multiply-adjust':3,factorial:4,prime:5,triangular:4,'look-and-say':5,'alternating-operation':5,quadratic:4,'weighted-recurrence':5,'reverse-add':5,collatz:5,'prime-gaps':5};
 const ratingLevel=score=>score<=1?'Easy':score<=3?'Medium':score<=5?'Hard':'Expert';
 function rateDifficulty(sequence,answer,pattern){
  const values=[...sequence,answer];let score=patternComplexity[pattern.type]??0;
@@ -36,6 +36,9 @@ case'look-and-say':{const values=[q.start];while(values.length<count){const text
 case'alternating-operation':{const values=[s[0]];while(values.length<count){const i=values.length-1;values.push(values.at(-1)*(i%2===0?q.factorA:q.factorB)+(i%2===0?q.offsetA:q.offsetB))}return values}
 case'quadratic':return Array.from({length:count},(_,i)=>q.a*(q.start+i)**2+q.b*(q.start+i)+q.c);
 case'weighted-recurrence':{const values=s.slice(0,2);while(values.length<count)values.push(values.at(-1)*q.factor+values.at(-2)+q.offset);return values}
+case'reverse-add':{const values=[s[0]];while(values.length<count)values.push(values.at(-1)+Number(String(values.at(-1)).split('').reverse().join('')));return values}
+case'collatz':{const values=[q.start];while(values.length<count){const previous=values.at(-1);values.push(previous%2===0?previous/2:previous*3+1)}return values}
+case'prime-gaps':{const values=[q.start];let gap=q.firstGap;while(values.length<count){values.push(values.at(-1)+gap);gap+=q.growth}return values}
 
 
 default:throw Error('unsupported pattern type '+q.type)}}

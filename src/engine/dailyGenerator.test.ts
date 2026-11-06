@@ -85,12 +85,32 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
       while (terms.length < count) terms.push(terms.at(-1)! * pattern.factor + terms.at(-2)! + pattern.offset);
       return terms;
     }
+    case 'reverse-add': {
+      const terms = [sequence[0]];
+      while (terms.length < count) terms.push(terms.at(-1)! + Number(String(terms.at(-1)!).split('').reverse().join('')));
+      return terms;
+    }
+    case 'collatz': {
+      const terms = [pattern.start];
+      while (terms.length < count) { const previous = terms.at(-1)!; terms.push(previous % 2 === 0 ? previous / 2 : previous * 3 + 1); }
+      return terms;
+    }
+    case 'prime-gaps': {
+      const terms = [pattern.start]; let gap = pattern.firstGap;
+      while (terms.length < count) { terms.push(terms.at(-1)! + gap); gap += pattern.growth; }
+      return terms;
+    }
   }
 }
 
 function checkPuzzle(puzzle: DailyPuzzle) {
   expect(puzzle.pattern.type).not.toBe('alternating');
   expect(puzzle.pattern.type).not.toBe('alternating-operation');
+  if (puzzle.pattern.type === 'collatz') {
+    const visibleTransitions = puzzle.sequence.slice(0, -1);
+    expect(visibleTransitions.some((value) => value % 2 === 0)).toBe(true);
+    expect(visibleTransitions.some((value) => value % 2 !== 0)).toBe(true);
+  }
   expect(deriveTerms(puzzle)).toEqual([...puzzle.sequence, puzzle.answer]);
   expect([...puzzle.sequence, puzzle.answer].every(Number.isSafeInteger)).toBe(true);
   expect([...puzzle.sequence, puzzle.answer].every((value) => Math.abs(value) <= 1_000_000)).toBe(true);

@@ -354,6 +354,65 @@
           "type": "integer"
          }
         }
+       },
+       {
+        "type": "object",
+        "required": [
+         "type",
+         "start"
+        ],
+        "properties": {
+         "type": {
+          "const": "reverse-add"
+         },
+         "start": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+         }
+        }
+       },
+       {
+        "type": "object",
+        "required": [
+         "type",
+         "start"
+        ],
+        "properties": {
+         "type": {
+          "const": "collatz"
+         },
+         "start": {
+          "type": "integer",
+          "minimum": 3
+         }
+        }
+       },
+       {
+        "type": "object",
+        "required": [
+         "type",
+         "start",
+         "firstGap",
+         "growth"
+        ],
+        "properties": {
+         "type": {
+          "const": "prime-gaps"
+         },
+         "start": {
+          "type": "integer",
+          "minimum": 2
+         },
+         "firstGap": {
+          "type": "integer",
+          "minimum": 1
+         },
+         "growth": {
+          "type": "integer",
+          "minimum": 1
+         }
+        }
        }
       ]
      }

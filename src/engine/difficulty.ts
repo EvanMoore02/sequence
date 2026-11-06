@@ -30,6 +30,9 @@ const patternComplexity: Record<AnswerPattern['type'], number> = {
   'alternating-operation': 5,
   quadratic: 4,
   'weighted-recurrence': 5,
+  'reverse-add': 5,
+  collatz: 5,
+  'prime-gaps': 5,
 };
 
 function levelFor(score: number): DifficultyRating {

@@ -9,6 +9,8 @@ const int=(rng:()=>number,min:number,max:number)=>min+Math.floor(rng()*(max-min+
 const safe=(n:number)=>Number.isSafeInteger(n)&&Math.abs(n)<=1_000_000;
 const isPrime=(n:number)=>{if(n<2)return false;for(let d=2;d*d<=n;d++)if(n%d===0)return false;return true};
 const nextPrime=(n:number)=>{let value=n+1;while(!isPrime(value))value++;return value};
+const reverseDigits=(n:number)=>Number(String(n).split('').reverse().join(''));
+const collatzNext=(n:number)=>n%2===0?n/2:3*n+1;
 const sayNumber=(n:number)=>{const text=String(n);let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}return Number(result)};
 function make(id:string,category:string,sequence:number[],answer:number,rule:string,explanation:string,hints:[string,string,string],pattern:AnswerPattern):GeneratedPuzzle{
  const templateId=id.split(':')[0],rating=rateDifficulty(sequence,answer,pattern);
@@ -71,7 +73,25 @@ const weightedRecurrence: PuzzleTemplate={id:'weighted-recurrence',category:'Wei
  const adjustment=offset<0?' - '+Math.abs(offset):' + '+offset;
  return make('weighted-recurrence:'+first+':'+second+':'+factor+':'+offset+':'+count,'Weighted recurrence',terms.slice(0,count),terms[count],'Multiply the previous term and combine the term before it','Each new term is '+factor+' times the previous term plus the term before that'+(offset===0?'':adjustment)+'; the next term is '+terms[count]+'.',['Each term depends on the two terms before it.','Use both earlier values, not just one.','Calculate '+factor+' x '+terms[count-1]+' + '+terms[count-2]+(offset<0?' - '+Math.abs(offset):' + '+offset)+' to get '+terms[count]+'.'],{type:'weighted-recurrence',factor,offset});
 }};
-export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,quadratic,weightedRecurrence];
+const reverseAdd: PuzzleTemplate={id:'reverse-add',category:'Digit operations',generate:rng=>{
+ const start=int(rng,11,49),count=5,terms=[start];while(terms.length<count+1)terms.push(terms.at(-1)!+reverseDigits(terms.at(-1)!));
+ return make('reverse-add:'+start,'Digit operations',terms.slice(0,count),terms[count],'Add each number to its digit reversal','Reverse the digits and add them to the original number each time; '+terms[count-1]+' + '+reverseDigits(terms[count-1])+' = '+terms[count]+'.',['Watch how the digits change from term to term.','Reverse a term, then combine it with the original.','Add '+terms[count-1]+' and '+reverseDigits(terms[count-1])+'.'],{type:'reverse-add',start});
+}};
+const collatzTerms=(start:number,count:number)=>{const terms=[start];while(terms.length<count+1)terms.push(collatzNext(terms.at(-1)!));return terms};
+const fairCollatzStarts=Array.from({length:73},(_,index)=>index+27).filter(start=>{
+ const shown=collatzTerms(start,5).slice(0,4);
+ return shown.some(value=>value%2===0)&&shown.some(value=>value%2!==0);
+});
+const collatz: PuzzleTemplate={id:'collatz',category:'Conditional rules',generate:rng=>{
+ const start=fairCollatzStarts[int(rng,0,fairCollatzStarts.length-1)],count=5,terms=collatzTerms(start,count),last=terms[count-1],answer=terms[count];
+ return make('collatz:'+start+':'+count,'Conditional rules',terms.slice(0,count),answer,'Halve even terms; triple odd terms and add one','For an even term, halve it; for an odd term, multiply by 3 and add 1. '+last+' is '+(last%2===0?'even, so '+last+' / 2 = '+answer:'odd, so 3 x '+last+' + 1 = '+answer)+'.',['Check whether each number is odd or even before moving to the next one.','The rule changes with parity: visible even and odd terms each demonstrate a different step.','For an odd term, multiply by 3 and add 1; apply that to '+last+'.'],{type:'collatz',start});
+}};
+const primeGaps: PuzzleTemplate={id:'prime-gaps',category:'Number theory',generate:rng=>{
+ const possibilities:number[]=[];for(let start=11;start<=97;start+=2){if(!isPrime(start))continue;for(const firstGap of [2,4,6]){const growth=2,terms=[start];let gap=firstGap;while(terms.length<7){terms.push(terms.at(-1)!+gap);gap+=growth}if(terms.every(isPrime))possibilities.push(start,firstGap)}}
+ const choice=int(rng,0,possibilities.length/2-1),start=possibilities[choice*2],firstGap=possibilities[choice*2+1],growth=2,count=6,terms=[start];let gap=firstGap;while(terms.length<count+1){terms.push(terms.at(-1)!+gap);gap+=growth}
+ return make('prime-gaps:'+start+':'+firstGap,'Number theory',terms.slice(0,count),terms[count],'Prime numbers with growing gaps','The gaps grow by '+growth+': '+Array.from({length:count},(_,i)=>firstGap+i*growth).join(', ')+'. The next prime is '+terms[count]+'.',['These are not consecutive primes; compare the gaps.','Each gap increases by '+growth+'.','Add '+(firstGap+(count-1)*growth)+' to '+terms[count-1]+' to get '+terms[count]+'.'],{type:'prime-gaps',start,firstGap,growth});
+}};
+export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,quadratic,weightedRecurrence,reverseAdd,collatz,primeGaps];
 export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
  const recent=new Set(recentIds);
  let fallback:GeneratedPuzzle|undefined;
