@@ -5,6 +5,7 @@ import SequenceDisplay from './SequenceDisplay';
 import { missingTerms, parseMissingAnswers } from './engine/missingTerms';
 import { difficultyForSolvedCount, endlessPuzzlePoints } from './engine/endlessRules';
 import { playerDifficultyForRating } from './engine/difficulty';
+import useEnterToAdvance from './useEnterToAdvance';
 import './Endless.css';
 
 type Mode = 'classic' | 'timed';
@@ -173,6 +174,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
     }) : current);
     setNote('');
   }
+
+  useEnterToAdvance(run?.outcome === 'solved', advance);
 
   function submit(event: FormEvent) {
     event.preventDefault();
