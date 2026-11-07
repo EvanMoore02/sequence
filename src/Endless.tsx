@@ -31,7 +31,7 @@ type Run = {
 type Save = { best: number; timedBest: number; run: Run | null };
 
 const KEY = 'sequence.endless.v1';
-const TIMED_RUN_SECONDS = 60;
+const TIMED_RUN_SECONDS = 180;
 
 function read(): Save {
   try {
@@ -260,7 +260,7 @@ export default function Endless({ onExit }: { onExit: () => void }) {
                 <span className="endless-mode-cta">Start classic <ArrowRight size={15} /></span>
               </button>
               <button className="endless-mode-card timed" onClick={() => begin('timed')}>
-                <span><b><Timer size={16} /> 60-second run</b><small>Score as much as you can before time runs out.</small></span>
+                <span><b><Timer size={16} /> 3-minute run</b><small>Score as much as you can before time runs out.</small></span>
                 <span className="endless-mode-cta">Start timed <ArrowRight size={15} /></span>
               </button>
             </div>
