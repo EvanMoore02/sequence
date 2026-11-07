@@ -4,8 +4,6 @@ async function openFreshGame(page: Page) {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  const tutorialDone = page.getByRole('button', { name: /got it, let.s play/i });
-  if (await tutorialDone.isVisible().catch(() => false)) await tutorialDone.click();
 }
 
 async function getTodayAnswers(page: Page) {
@@ -16,7 +14,9 @@ async function getTodayAnswers(page: Page) {
       import('/src/engine/dailyGenerator.ts'),
       import('/src/engine/missingTerms.ts'),
     ]);
-    return dailyPuzzles(date).map((puzzle) => ({ answers: missingTerms(puzzle), difficulty: puzzle.difficulty }));
+    const puzzles = dailyPuzzles(date);
+    if (!puzzles) throw new Error(`Daily puzzles unavailable for ${date}`);
+    return puzzles.map((puzzle) => ({ answers: missingTerms(puzzle), difficulty: puzzle.difficulty }));
   });
 }
 
@@ -25,7 +25,7 @@ test('Daily Challenge resumes, follows the difficulty order, and shows results',
   const puzzles = await getTodayAnswers(page);
   expect(puzzles.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
 
-  await page.getByRole('button', { name: /play today.s puzzle/i }).click();
+  await page.getByRole('button', { name: /play today.s challenge/i }).click();
   await expect(page.locator('.difficulty')).toHaveCount(0);
 
   // Make one incorrect attempt, reload, and confirm the saved run resumes in place.
@@ -61,7 +61,7 @@ test('Daily Challenge resumes, follows the difficulty order, and shows results',
 
 test('local preview shows 50 upcoming challenges and their five puzzles', async ({ page }) => {
   await openFreshGame(page);
-  await page.getByRole('button', { name: /preview next 50 daily challenges/i }).click();
+  await page.getByRole('button', { name: /preview upcoming challenges/i }).click();
   await expect(page.getByRole('heading', { name: 'Upcoming Daily Challenges' })).toBeVisible();
   const days = page.locator('.daily-preview-day');
   await expect(days).toHaveCount(50);
@@ -98,7 +98,7 @@ test('Hard Practice hides and accepts the next number', async ({ page }) => {
 test('Endless can be solved and advanced with the Next puzzle action', async ({ page }) => {
   await openFreshGame(page);
   await page.getByRole('button', { name: /endless/i }).click();
-  await page.getByRole('button', { name: /start endless run/i }).click();
+  await page.getByRole('button', { name: /start classic/i }).click();
 
   const answers = await page.evaluate(async () => {
     const saved = JSON.parse(localStorage.getItem('sequence.endless.v1') || 'null');
