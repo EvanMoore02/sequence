@@ -31,3 +31,10 @@
 :root[data-theme=dark] .tutorial-steps b{color:#edf1eb}
 :root[data-theme=dark] .tutorial-steps li:before{background:#344237;color:#c1d9bb}
 :root[data-theme=dark] .tutorial-done{background:#709176;color:#101812}
+
+:root[data-theme=dark] .tutorial-dialog{color:#f4f7f2}
+:root[data-theme=dark] .tutorial-dialog h1,:root[data-theme=dark] .tutorial-steps b{color:#f4f7f2}
+:root[data-theme=dark] .tutorial-intro,:root[data-theme=dark] .tutorial-steps span{color:#e0e8de;font-size:13px;line-height:1.6}
+:root[data-theme=dark] .tutorial-eyebrow,:root[data-theme=dark] .tutorial-foot{color:#cdd7ca;font-size:10px}
+:root[data-theme=dark] .tutorial-steps li:before{background:#3b4d3d;color:#e5f0e1}
+:root[data-theme=dark] .tutorial-done{background:#3f6548;color:#fff}
