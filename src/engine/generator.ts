@@ -71,7 +71,7 @@ const weightedRecurrence: PuzzleTemplate={id:'weighted-recurrence',category:'Wei
 }};
 const reverseAdd: PuzzleTemplate={id:'reverse-add',category:'Digit operations',generate:rng=>{
  const start=int(rng,11,49),count=5,terms=[start];while(terms.length<count+1)terms.push(terms.at(-1)!+reverseDigits(terms.at(-1)!));
- return make('reverse-add:'+start,'Digit operations',terms.slice(0,count),terms[count],'Add each number to its digit reversal','Reverse the digits and add them to the original number each time; '+terms[count-1]+' + '+reverseDigits(terms[count-1])+' = '+terms[count]+'.',['Watch how the digits change from term to term.','Reverse a term, then combine it with the original.','Add '+terms[count-1]+' and '+reverseDigits(terms[count-1])+'.'],{type:'reverse-add',start});
+ return make('reverse-add:'+start,'Digit operations',terms.slice(0,count),terms[count],'Add each number to its reverse','Reverse the digits, then add: '+terms[count-1]+' + '+reverseDigits(terms[count-1])+' = '+terms[count]+'.',['Watch how the digits change from term to term.','Reverse a term, then combine it with the original.','Add '+terms[count-1]+' and '+reverseDigits(terms[count-1])+'.'],{type:'reverse-add',start});
 }};
 const collatzTerms=(start:number,count:number)=>{const terms=[start];while(terms.length<count+1)terms.push(collatzNext(terms.at(-1)!));return terms};
 const fairCollatzStarts=Array.from({length:73},(_,index)=>index+27).filter(start=>{

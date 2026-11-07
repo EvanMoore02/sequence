@@ -4,7 +4,7 @@
 :root[data-motion=reduce] *, :root[data-motion=reduce] *::before, :root[data-motion=reduce] *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 @media(prefers-reduced-motion:reduce){:root[data-motion=full] *, :root[data-motion=full] *::before, :root[data-motion=full] *::after{scroll-behavior:smooth!important;animation-duration:.22s!important;animation-iteration-count:1!important;transition-duration:.15s!important}}
 @media(max-width:600px){.setting-row{align-items:flex-start;flex-direction:column;gap:12px}.setting-options,.motion-options{width:100%}.setting-choice{flex:1}.settings-card{padding:6px 15px 13px}}
-.endless.has-next-dock{padding-bottom:calc(128px + env(safe-area-inset-bottom))}.endless-next-dock{position:fixed;z-index:30;right:0;bottom:0;left:0;display:flex;justify-content:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#f7f7f4;box-shadow:0 -8px 22px #20292012}.endless-next-dock .primary{width:min(100%,568px);height:52px}.endless-next-dock .primary:focus-visible{outline-offset:3px}:root[data-theme=dark] .endless-next-dock{background:#171c18;border-color:#353f36;box-shadow:0 -8px 22px #0006}
+
 
 .daily-preview-entry{display:flex;align-items:center;gap:7px;margin:12px auto 0;padding:8px 10px;border:1px dashed #cbd4c9;border-radius:8px;background:transparent;color:#687b68;font-size:10px}
 .daily-preview-entry:hover{background:#fff;border-style:solid}
@@ -14,3 +14,20 @@
 
 
 .feedback-link{color:#71836f;text-decoration:none;font-size:10px;font-weight:600}.feedback-link:hover{text-decoration:underline}
+
+
+.puzzle-dialog-backdrop{position:fixed;z-index:60;inset:0;display:grid;place-items:center;padding:20px;background:#1720189c;backdrop-filter:blur(3px)}.puzzle-dialog{width:min(100%,520px);max-height:min(90dvh,760px);overflow:auto;box-shadow:0 24px 80px #0004;animation:fade .18s ease-out}.puzzle-dialog h2{margin:10px 0;font:600 22px Manrope,sans-serif}.puzzle-dialog .numbers{margin:14px 0}.puzzle-dialog>p{font-size:13px;line-height:1.55;color:#747a71}.dialog-answer{display:block;margin:12px 0 18px;font-size:13px;color:#637d63}.puzzle-dialog>.primary{width:100%;height:50px}:root[data-theme=dark] .puzzle-dialog>p{color:#b1bbb0}
+.puzzle-dialog .tile{min-width:0;height:auto;min-height:54px;padding:6px 3px;line-height:1.1;white-space:normal;overflow-wrap:anywhere;word-break:break-all;font-size:clamp(11px,4.5vw,20px)}.puzzle-dialog .numbers{gap:6px}.dialog-answer{margin-bottom:22px}
+
+.skip-puzzle{display:block;margin:12px 0 0;padding:8px 2px;border:0;background:transparent;color:#7e857b;font-size:11px;text-decoration:underline;text-underline-offset:3px}.skip-puzzle:hover{color:#4f6c53}.skip-puzzle:focus-visible{outline-offset:2px}
+
+:root[data-theme=dark] .tutorial-dialog{background:#202720;border-color:#3b473d;color:#edf1eb}
+:root[data-theme=dark] .tutorial-close{background:#29322a;border-color:#465248;color:#e1e8df}
+:root[data-theme=dark] .tutorial-close:hover{background:#354236}
+:root[data-theme=dark] .tutorial-mark{background:#304333;color:#b7d0b3}
+:root[data-theme=dark] .tutorial-eyebrow,:root[data-theme=dark] .tutorial-foot{color:#b0b9ad}
+:root[data-theme=dark] .tutorial-intro,:root[data-theme=dark] .tutorial-steps span{color:#c1c9bd}
+:root[data-theme=dark] .tutorial-steps li{border-color:#3a443b}
+:root[data-theme=dark] .tutorial-steps b{color:#edf1eb}
+:root[data-theme=dark] .tutorial-steps li:before{background:#344237;color:#c1d9bb}
+:root[data-theme=dark] .tutorial-done{background:#709176;color:#101812}

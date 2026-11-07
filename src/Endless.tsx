@@ -9,7 +9,7 @@ import useEnterToAdvance from './useEnterToAdvance';
 import './Endless.css';
 
 type Mode = 'classic' | 'timed';
-type Outcome = 'solved' | 'over' | null;
+type Outcome = 'solved' | 'missed' | 'over' | null;
 type EndReason = 'lives' | 'time' | null;
 type Run = {
   puzzle: GeneratedPuzzle;
@@ -144,7 +144,7 @@ export default function Endless({ onExit }: { onExit: () => void }) {
   }
 
   function advance() {
-    if (!run || run.outcome !== 'solved') return;
+    if (!run || (run.outcome !== 'solved' && run.outcome !== 'missed')) return;
     const remainingMs = run.mode === 'timed' ? run.remainingMs ?? 0 : null;
     if (run.mode === 'timed' && (remainingMs ?? 0) <= 0) {
       setSave((current) => current.run ? saveRun(current, {
@@ -175,7 +175,10 @@ export default function Endless({ onExit }: { onExit: () => void }) {
     setNote('');
   }
 
-  useEnterToAdvance(run?.outcome === 'solved', advance);
+  useEnterToAdvance(run?.mode === 'classic' && (run.outcome === 'solved' || run.outcome === 'missed'), advance);
+  useEffect(() => {
+    if (run?.mode === 'timed' && (run.outcome === 'solved' || run.outcome === 'missed')) advance();
+  }, [run?.mode, run?.outcome, run?.puzzle.id, advance]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -211,7 +214,15 @@ export default function Endless({ onExit }: { onExit: () => void }) {
             : current.run.remainingMs,
         });
       });
-      setNote(over ? 'Out of lives. The answer was ' + expected[0] + '.' : 'Not quite. ' + lives + ' lives left. Try again.');
+      setNote(over ? 'Out of lives. The answer was ' + expected[0] + '.' : run.mode === 'classic' ? 'Not quite. The answer was ' + expected.join(', ') + '.' : '');
+      if (!over) setSave((current) => current.run ? saveRun(current, {
+        ...current.run,
+        outcome: 'missed',
+        deadline: null,
+        remainingMs: current.run.mode === 'timed' && current.run.deadline !== null
+          ? Math.max(0, current.run.deadline - Date.now())
+          : current.run.remainingMs,
+      }) : current);
       return;
     }
 
@@ -247,11 +258,11 @@ export default function Endless({ onExit }: { onExit: () => void }) {
   const best = run?.mode === 'timed' ? save.timedBest : save.best;
 
   return (
-    <section className={'endless fade' + (run?.outcome === 'solved' ? ' has-next-dock' : '')}>
+    <section className="endless fade">
       <button className="back" onClick={onExit}><ArrowLeft size={16} /> Home</button>
       {!run ? (
         <>
-          <div className="practicehero"><Trophy /><label>ENDLESS MODE</label><h1>Endless mode</h1><p>Three lives, a changing mix of number patterns, and difficulty that rises every three solves.</p></div>
+          <div className="practicehero"><Trophy /><label>ENDLESS MODE</label><h1>Endless mode</h1><p>Three lives, one try per puzzle, and difficulty that rises every three solves.</p></div>
           <article className="endless-start">
             <div><label>PERSONAL BESTS</label><strong>{save.best} classic · {save.timedBest} timed</strong></div>
             <div className="endless-mode-options">
@@ -280,16 +291,16 @@ export default function Endless({ onExit }: { onExit: () => void }) {
           <div className="level-progress"><span>Difficulty progression</span><div>{[0, 1, 2].map((index) => <i key={index} className={run.solved % 3 > index ? 'filled' : ''} />)}</div><b>{Math.min(3, run.solved % 3)}/3</b></div>
           <div className="practice-prompt"><span>{puzzle!.category} · {playerDifficultyForRating(puzzle!.difficulty)}</span><SequenceDisplay puzzle={puzzle!} revealed={Boolean(run.outcome)} solved={run.outcome === 'solved'} /></div>
           {!run.outcome && <>
-            <div className="attempts"><span>ATTEMPTS THIS PUZZLE</span><div>{[0, 1, 2].map((index) => <i key={index} className={index >= run.attempts ? '' : 'spent'} />)}</div></div>
+            <div className="attempts"><span>ONE TRY THIS PUZZLE</span><div><i className={run.attempts ? 'spent' : ''} /></div></div>
             <form onSubmit={submit}><label className="answer-label" htmlFor="endless-answer">Your answer</label><div className="inputrow"><input id="endless-answer" type="text" inputMode="text" enterKeyHint="done" autoCapitalize="off" autoCorrect="off" autoComplete="off" placeholder={missingTerms(puzzle!).length > 1 ? 'Separate answers with commas' : 'Type a number'} value={run.input} onChange={(event) => { setSave((current) => current.run ? { ...current, run: { ...current.run, input: event.target.value } } : current); setNote(''); }} /><button className="submit" disabled={!run.input.trim()}>Submit answer <ArrowRight size={16} /></button></div></form>
             <button className="hintbutton" disabled={run.hintLevel >= 3} onClick={hint}><Lightbulb size={17} />{run.hintLevel ? 'Reveal next hint' : 'Get a hint'} {run.hintLevel}/3</button>
             {run.hintLevel > 0 && <aside>HINT {run.hintLevel}<p>{puzzle!.hints[run.hintLevel - 1]}</p></aside>}
             {note && <p role="status" className="notice">{note}</p>}
           </>}
-          {run.outcome === 'solved' && <article className="practice-answer"><label>THE PATTERN · {puzzle!.rule}</label><p className="earned">+{run.pointsEarned} points · {run.score} total</p><p>{puzzle!.explanation}</p></article>}
+          {run.mode === 'classic' && (run.outcome === 'solved' || run.outcome === 'missed') && <div className="puzzle-dialog-backdrop"><article className="practice-answer puzzle-dialog" role="dialog" aria-modal="true" aria-labelledby="endless-pattern-title"><h2 id="endless-pattern-title">{run.outcome === 'solved' ? 'Nice job!' : 'Good effort—keep going!'}</h2><SequenceDisplay puzzle={puzzle!} revealed solved={run.outcome === 'solved'}/><p className="earned">{run.outcome === 'solved' ? '+' + run.pointsEarned + ' points · ' + run.score + ' total' : run.lives + ' lives remaining'}</p><p>{puzzle!.explanation}</p><strong className="dialog-answer">Answer: {missingTerms(puzzle!).join(', ')}</strong><button className="primary" onClick={advance}>Next puzzle <ArrowRight size={16} /></button></article></div>}
           {run.outcome === 'over' && <article className="practice-answer"><label>RUN OVER · {run.endReason === 'time' ? 'TIME IS UP' : 'OUT OF LIVES'}</label><p>{puzzle!.explanation}</p><p className="earned">Final score: {run.score} · {run.solved} solved</p><button className="primary" onClick={() => begin(run.mode, run.recent)}>Play again <ArrowRight size={16} /></button><button className="endless-change-mode" onClick={() => { setSave((current) => ({ ...current, run: null })); setNote(''); }}>Choose another mode</button></article>}
           <p className="practice-note">Endless score and high scores are separate from Daily and Practice.</p>
-          {run.outcome === 'solved' && <div className="endless-next-dock"><button className="primary" onClick={advance}>Next puzzle <ArrowRight size={16} /></button></div>}
+          
         </>
       )}
     </section>
