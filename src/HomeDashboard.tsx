@@ -61,7 +61,7 @@ export default function HomeDashboard({
             <span><b>Practice</b><small>Explore patterns at your own pace.</small></span><ArrowRight size={17} />
           </button>
           <button className="home-mode-card" onClick={onEndless}>
-            <span><b>Endless</b><small>Classic or race the 60-second clock.</small></span><ArrowRight size={17} />
+            <span><b>Endless</b><small>Classic or race the 3-minute clock.</small></span><ArrowRight size={17} />
           </button>
         </div>
       </section>
