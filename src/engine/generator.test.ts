@@ -24,8 +24,24 @@ function validate(p:ReturnType<typeof generatePracticePuzzle>){
  }
 }
 describe('practice puzzle generator',()=>{
- it('generates internally consistent non-alternating puzzles for every template',()=>{expect(templates.some((t)=>t.id.includes('alternat'))).toBe(false);for(const t of templates){const p=t.generate(rngFrom(12345));expect(p.pattern.type).not.toBe('alternating');expect(p.pattern.type).not.toBe('alternating-operation');validate(p)}});
- it('returns puzzles at the selected difficulty and bounded values',()=>{for(const [level,rating] of [['Easy','Medium'],['Medium','Hard'],['Hard','Expert']] as const){for(let seed=1;seed<=100;seed++){const p=generatePracticePuzzle(level,[],rngFrom(seed));expect(p.difficulty).toBe(rating);expect(p.pattern.type).not.toBe('alternating');expect(p.pattern.type).not.toBe('alternating-operation');validate(p)}}});
+ it('generates internally consistent puzzles for every template',()=>{for(const t of templates){const p=t.generate(rngFrom(12345));validate(p)}});
+ it('uses distinct visual reasoning families with eight validated options',()=>{
+  const visual=templates.find((template)=>template.id==='visual-matrix')!;
+  const families=new Set<string>();
+  for(let seed=1;seed<=512;seed++){
+   const puzzle=visual.generate(rngFrom(seed*104729)),matrix=puzzle.visualPattern!;
+   families.add(matrix.family!);
+   expect(matrix.cells).toHaveLength((matrix.rows??3)*(matrix.columns??3));
+   expect(matrix.cells.filter((cell)=>cell===null)).toHaveLength(1);
+   expect(matrix.cells[matrix.missingIndex??8]).toBeNull();
+   expect(matrix.choices).toHaveLength(8);
+   expect(new Set(matrix.choices.map((choice)=>JSON.stringify(choice))).size).toBe(8);
+   expect(matrix.choices[matrix.answerIndex]).toBeDefined();
+   expect(puzzle.explanation).toContain('Option '+String.fromCharCode(65+matrix.answerIndex));
+  }
+  expect(families.size).toBe(8);
+ });
+ it('returns puzzles at the selected difficulty and bounded values',()=>{for(const [level,rating] of [['Easy','Medium'],['Medium','Hard'],['Hard','Expert']] as const){for(let seed=1;seed<=100;seed++){const p=generatePracticePuzzle(level,[],rngFrom(seed));expect(p.difficulty).toBe(rating);validate(p)}}});
  it('supports all player levels without Easy-rated puzzles and avoids recent IDs',()=>{const rng=rngFrom(991);let recent:string[]=[];for(let i=0;i<30;i++){const p=generatePracticePuzzle('All',recent,rng);expect(p.difficulty).not.toBe('Easy');expect(recent).not.toContain(p.id);recent=[...recent,p.id]}});
  it('produces stable IDs and puzzle content for the same parameters',()=>{for(const t of templates){expect(t.generate(rngFrom(77))).toEqual(t.generate(rngFrom(77)))}});
 });

@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight, Heart, Lightbulb, Timer, Trophy } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ArrowLeft, ArrowRight, Check, Heart, Lightbulb, Timer, Trophy, X as CloseIcon } from 'lucide-react';
 import { generatePuzzle, type GeneratedPuzzle } from './engine/generator';
 import SequenceDisplay from './SequenceDisplay';
 import { missingTerms, parseMissingAnswers } from './engine/missingTerms';
@@ -29,6 +29,12 @@ type Run = {
   pointsEarned: number;
 };
 type Save = { best: number; timedBest: number; run: Run | null };
+type AnswerFeedback = 'correct' | 'wrong';
+
+function FeedbackMark({ kind, inline = false }: { kind: AnswerFeedback; inline?: boolean }) {
+  const Icon = kind === 'correct' ? Check : CloseIcon;
+  return <div className={'endless-answer-mark ' + kind + (inline ? ' inline' : '')} role="status" aria-label={kind === 'correct' ? 'Correct answer' : 'Incorrect answer'}><Icon size={40} strokeWidth={3} aria-hidden="true" /></div>;
+}
 
 const KEY = 'sequence.endless.v1';
 const TIMED_RUN_SECONDS = 180;
@@ -92,6 +98,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
   const [save, setSave] = useState(read);
   const [note, setNote] = useState('');
   const [timeLeft, setTimeLeft] = useState(TIMED_RUN_SECONDS);
+  const [answerFeedback, setAnswerFeedback] = useState<AnswerFeedback | null>(null);
+  const answerFeedbackAt = useRef(0);
   const run = save.run;
 
   useEffect(() => {
@@ -138,6 +146,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
 
   function begin(mode: Mode, recent = run?.recent ?? []) {
     const nextRun = newRun(mode, recent);
+    answerFeedbackAt.current = 0;
+    setAnswerFeedback(null);
     setSave((current) => saveRun(current, nextRun));
     setTimeLeft(mode === 'timed' ? TIMED_RUN_SECONDS : 0);
     setNote('');
@@ -145,7 +155,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
 
   function advance() {
     if (!run || (run.outcome !== 'solved' && run.outcome !== 'missed')) return;
-    const remainingMs = run.mode === 'timed' ? run.remainingMs ?? 0 : null;
+    const feedbackDelay = answerFeedbackAt.current ? Date.now() - answerFeedbackAt.current : 0;
+    const remainingMs = run.mode === 'timed' ? Math.max(0, (run.remainingMs ?? 0) - feedbackDelay) : null;
     if (run.mode === 'timed' && (remainingMs ?? 0) <= 0) {
       setSave((current) => current.run ? saveRun(current, {
         ...current.run,
@@ -154,6 +165,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
         outcome: 'over',
         endReason: 'time',
       }) : current);
+      answerFeedbackAt.current = 0;
+      setAnswerFeedback(null);
       return;
     }
 
@@ -172,13 +185,19 @@ export default function Endless({ onExit }: { onExit: () => void }) {
       outcome: null,
       pointsEarned: 0,
     }) : current);
+    answerFeedbackAt.current = 0;
+    setAnswerFeedback(null);
     setNote('');
   }
 
   useEnterToAdvance(run?.mode === 'classic' && (run.outcome === 'solved' || run.outcome === 'missed'), advance);
+  const advanceRef = useRef(advance);
+  advanceRef.current = advance;
   useEffect(() => {
-    if (run?.mode === 'timed' && (run.outcome === 'solved' || run.outcome === 'missed')) advance();
-  }, [run?.mode, run?.outcome, run?.puzzle.id, advance]);
+    if (run?.mode !== 'timed' || (run.outcome !== 'solved' && run.outcome !== 'missed')) return;
+    const timeout = window.setTimeout(() => advanceRef.current(), 760);
+    return () => window.clearTimeout(timeout);
+  }, [run?.mode, run?.outcome, run?.puzzle.id]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -189,14 +208,19 @@ export default function Endless({ onExit }: { onExit: () => void }) {
     }
 
     const expected = missingTerms(run.puzzle);
-    const answers = parseMissingAnswers(run.input.trim(), expected.length);
-    if (!answers) {
+    const answers = run.puzzle.shapePattern ? [] : parseMissingAnswers(run.input.trim(), expected.length);
+    if (!run.puzzle.shapePattern && !answers) {
       setNote(expected.length === 1 ? 'Enter a whole number to submit.' : 'Enter all ' + expected.length + ' missing numbers in order, separated by commas.');
       return;
     }
 
     const attempts = run.attempts + 1;
-    if (!expected.every((answer, index) => answer === answers[index])) {
+    const isCorrect = run.puzzle.shapePattern
+      ? run.input.trim() === run.puzzle.shapePattern.answer
+      : expected.every((answer, index) => answer === answers?.[index]);
+    if (!isCorrect) {
+      answerFeedbackAt.current = Date.now();
+      setAnswerFeedback('wrong');
       const lives = run.lives - 1;
       const over = lives === 0;
       setSave((current) => {
@@ -214,7 +238,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
             : current.run.remainingMs,
         });
       });
-      setNote(over ? 'Out of lives. The answer was ' + expected[0] + '.' : run.mode === 'classic' ? 'Not quite. The answer was ' + expected.join(', ') + '.' : '');
+      const answerText = run.puzzle.visualPattern ? 'the missing figure shown in the matrix' : run.puzzle.shapePattern?.answer ?? expected.join(', ');
+      setNote(over ? 'Out of lives. The answer was ' + answerText + '.' : run.mode === 'classic' ? 'Not quite. The answer was ' + answerText + '.' : '');
       if (!over) setSave((current) => current.run ? saveRun(current, {
         ...current.run,
         outcome: 'missed',
@@ -227,6 +252,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
     }
 
     const points = endlessPuzzlePoints(attempts, run.hints);
+    answerFeedbackAt.current = Date.now();
+    setAnswerFeedback('correct');
     const score = run.score + points;
     const remainingMs = run.mode === 'timed' && run.deadline !== null
       ? Math.max(0, run.deadline - Date.now())
@@ -242,7 +269,7 @@ export default function Endless({ onExit }: { onExit: () => void }) {
       remainingMs,
       pointsEarned: points,
     }) : current);
-    setNote('Correct! The answer is ' + run.puzzle.answer + '.');
+    setNote(run.puzzle.visualPattern ? 'Correct! You found the missing figure.' : 'Correct! The answer is ' + (run.puzzle.shapePattern?.answer ?? run.puzzle.answer) + '.');
   }
 
   function hint() {
@@ -289,15 +316,15 @@ export default function Endless({ onExit }: { onExit: () => void }) {
             {run.mode === 'timed' && <span className={'endless-clock' + (timeLeft <= 10 ? ' urgent' : '')} role="timer" aria-label={formatTime(timeLeft)}><Timer size={15} />{formatTime(timeLeft)}</span>}
           </div>
           <div className="level-progress"><span>Difficulty progression</span><div>{[0, 1, 2].map((index) => <i key={index} className={run.solved % 3 > index ? 'filled' : ''} />)}</div><b>{Math.min(3, run.solved % 3)}/3</b></div>
-          <div className="practice-prompt"><span>{puzzle!.category} · {playerDifficultyForRating(puzzle!.difficulty)}</span><SequenceDisplay puzzle={puzzle!} revealed={Boolean(run.outcome)} solved={run.outcome === 'solved'} /></div>
+          <div className="practice-prompt"><span>{puzzle!.category} · {playerDifficultyForRating(puzzle!.difficulty)}</span>{puzzle!.taskFormat==='missing-middle'&&<p>Complete the sequence.</p>}{puzzle!.taskFormat==='find-odd-term'&&<p>Find the term that breaks the pattern.</p>}{puzzle!.shapePattern ? <div className="shape-sequence" aria-label="Shape pattern">{[...puzzle!.shapePattern.sequence, ...(run.outcome ? [puzzle!.shapePattern.answer] : ['?'])].map((shape, index) => <b key={index} className={shape === '?' ? 'unknown' : ''}>{shape}</b>)}</div> : <SequenceDisplay puzzle={puzzle!} revealed={Boolean(run.outcome)} solved={run.outcome === 'solved'} />}{answerFeedback && (run.mode === 'timed' || run.outcome === 'over') && <FeedbackMark key={puzzle!.id + ':' + run.outcome + ':' + run.attempts} kind={answerFeedback} />}</div>
           {!run.outcome && <>
             <div className="attempts"><span>ONE TRY THIS PUZZLE</span><div><i className={run.attempts ? 'spent' : ''} /></div></div>
-            <form onSubmit={submit}><label className="answer-label" htmlFor="endless-answer">Your answer</label><div className="inputrow"><input id="endless-answer" type="text" inputMode="text" enterKeyHint="done" autoCapitalize="off" autoCorrect="off" autoComplete="off" placeholder={missingTerms(puzzle!).length > 1 ? 'Separate answers with commas' : 'Type a number'} value={run.input} onChange={(event) => { setSave((current) => current.run ? { ...current, run: { ...current.run, input: event.target.value } } : current); setNote(''); }} /><button className="submit" disabled={!run.input.trim()}>Submit answer <ArrowRight size={16} /></button></div></form>
+            {puzzle!.shapePattern ? <div className="shape-choices" role="group" aria-label="Choose the next shape">{puzzle!.shapePattern.choices.map((shape) => <button type="button" key={shape} aria-pressed={run.input === shape} onClick={() => setSave((current) => current.run ? { ...current, run: { ...current.run, input: shape } } : current)}>{shape}</button>)}<button className="submit" disabled={!run.input} onClick={() => submit({ preventDefault() {} } as FormEvent)}>Submit answer <ArrowRight size={16} /></button></div> : <form onSubmit={submit}><label className="answer-label" htmlFor="endless-answer">Your answer</label><div className="inputrow"><input id="endless-answer" type="text" inputMode="text" enterKeyHint="done" autoCapitalize="off" autoCorrect="off" autoComplete="off" placeholder={missingTerms(puzzle!).length > 1 ? 'Separate answers with commas' : 'Type a number'} value={run.input} onChange={(event) => { setSave((current) => current.run ? { ...current, run: { ...current.run, input: event.target.value } } : current); setNote(''); }} /><button className="submit" disabled={!run.input.trim()}>Submit answer <ArrowRight size={16} /></button></div></form>}
             <button className="hintbutton" disabled={run.hintLevel >= 3} onClick={hint}><Lightbulb size={17} />{run.hintLevel ? 'Reveal next hint' : 'Get a hint'} {run.hintLevel}/3</button>
             {run.hintLevel > 0 && <aside>HINT {run.hintLevel}<p>{puzzle!.hints[run.hintLevel - 1]}</p></aside>}
             {note && <p role="status" className="notice">{note}</p>}
           </>}
-          {run.mode === 'classic' && (run.outcome === 'solved' || run.outcome === 'missed') && <div className="puzzle-dialog-backdrop"><article className="practice-answer puzzle-dialog" role="dialog" aria-modal="true" aria-labelledby="endless-pattern-title"><h2 id="endless-pattern-title">{run.outcome === 'solved' ? 'Nice job!' : 'Good effort—keep going!'}</h2><SequenceDisplay puzzle={puzzle!} revealed solved={run.outcome === 'solved'}/><p className="earned">{run.outcome === 'solved' ? '+' + run.pointsEarned + ' points · ' + run.score + ' total' : run.lives + ' lives remaining'}</p><p>{puzzle!.explanation}</p><strong className="dialog-answer">Answer: {missingTerms(puzzle!).join(', ')}</strong><button className="primary" onClick={advance}>Next puzzle <ArrowRight size={16} /></button></article></div>}
+          {run.mode === 'classic' && (run.outcome === 'solved' || run.outcome === 'missed') && <div className="puzzle-dialog-backdrop"><article className="practice-answer puzzle-dialog" role="dialog" aria-modal="true" aria-labelledby="endless-pattern-title"><FeedbackMark kind={run.outcome === 'solved' ? 'correct' : 'wrong'} inline /><h2 id="endless-pattern-title">{run.outcome === 'solved' ? 'Nice job!' : 'Good effort—keep going!'}</h2>{puzzle!.shapePattern ? <div className="shape-sequence">{[...puzzle!.shapePattern.sequence,puzzle!.shapePattern.answer].map((shape,index)=><b key={index}>{shape}</b>)}</div> : <SequenceDisplay puzzle={puzzle!} revealed solved={run.outcome === 'solved'}/>}<p className="earned">{run.outcome === 'solved' ? '+' + run.pointsEarned + ' points · ' + run.score + ' total' : run.lives + ' lives remaining'}</p><p>{puzzle!.explanation}</p><strong className="dialog-answer">{puzzle!.visualPattern ? 'Correct figure is highlighted above' : 'Answer: ' + (puzzle!.shapePattern?.answer ?? missingTerms(puzzle!).join(', '))}</strong><button className="primary" onClick={advance}>Next puzzle <ArrowRight size={16} /></button></article></div>}
           {run.outcome === 'over' && <article className="practice-answer"><label>RUN OVER · {run.endReason === 'time' ? 'TIME IS UP' : 'OUT OF LIVES'}</label><p>{puzzle!.explanation}</p><p className="earned">Final score: {run.score} · {run.solved} solved</p><button className="primary" onClick={() => begin(run.mode, run.recent)}>Play again <ArrowRight size={16} /></button><button className="endless-change-mode" onClick={() => { setSave((current) => ({ ...current, run: null })); setNote(''); }}>Choose another mode</button></article>}
           <p className="practice-note">Endless score and high scores are separate from Daily and Practice.</p>
           

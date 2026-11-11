@@ -36,8 +36,8 @@ export default function HomeDashboard({
     <section className="home-screen fade">
       <div className="home-date"><CalendarDays size={15} />{displayDate}</div>
       <div className="home-hero">
-        <label>DAILY NUMBER PUZZLE</label>
-        <h1>Find the pattern.<br /><i>Find the next number.</i></h1>
+        <label>DAILY REASONING PUZZLE</label>
+        <h1>Find the pattern.<br /><i>Find what comes next.</i></h1>
         <p>Five puzzles a day. Hints are there if you need them.</p>
       </div>
 

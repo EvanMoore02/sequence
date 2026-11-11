@@ -1,13 +1,15 @@
 import type { Puzzle } from '../types';
 
-type PuzzleTerms = Pick<Puzzle, 'id' | 'difficulty' | 'sequence' | 'answer'>;
+type PuzzleTerms = Pick<Puzzle, 'id' | 'difficulty' | 'sequence' | 'answer' | 'answerIndex' | 'taskFormat'>;
 
-export function missingTermIndices(puzzle: Pick<Puzzle, 'id' | 'difficulty' | 'sequence'>): number[] {
-  return [puzzle.sequence.length];
+export function missingTermIndices(puzzle: Pick<Puzzle, 'id' | 'difficulty' | 'sequence' | 'answerIndex'>): number[] {
+  return [puzzle.answerIndex ?? puzzle.sequence.length];
 }
 
 export function missingTerms(puzzle: PuzzleTerms): number[] {
-  const terms = [...puzzle.sequence, puzzle.answer];
+  if (puzzle.taskFormat === 'find-odd-term') return [puzzle.answer];
+  const terms = [...puzzle.sequence];
+  terms.splice(puzzle.answerIndex ?? terms.length, 0, puzzle.answer);
   return missingTermIndices(puzzle).map((index) => terms[index]);
 }
 

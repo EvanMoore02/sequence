@@ -32,6 +32,10 @@ const patternComplexity: Record<AnswerPattern['type'], number> = {
   'reverse-add': 5,
   collatz: 5,
   'prime-gaps': 5,
+  // Shape sequences are rendered as visual choices and reserve an Expert slot
+  // in every Daily lineup; keep their rating above the Expert threshold.
+  'shape-cycle': 5,
+  'visual-matrix': 5,
 };
 
 function levelFor(score: number): DifficultyRating {

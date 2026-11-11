@@ -1,9 +1,9 @@
-import type {Puzzle} from '../types';
+import type {Puzzle,VisualShape,VisualTile} from '../types';
 import type {AnswerPattern} from '../data/puzzleTypes';
 import {rateDifficulty, ratingForPlayerDifficulty, type PlayerDifficulty} from './difficulty';
 
 export type PracticeDifficulty=PlayerDifficulty|'All';
-export type GeneratedPuzzle=Puzzle&{templateId:string;difficultyScore:number;pattern:AnswerPattern};
+export type GeneratedPuzzle=Puzzle&{templateId:string;difficultyScore:number;pattern:AnswerPattern;shapePattern?:{sequence:string[];answer:string;choices:string[]}};
 export type PuzzleTemplate={id:string;category:string;generate:(rng:()=>number)=>GeneratedPuzzle};
 const int=(rng:()=>number,min:number,max:number)=>min+Math.floor(rng()*(max-min+1));
 const safe=(n:number)=>Number.isSafeInteger(n)&&Math.abs(n)<=1_000_000;
@@ -14,11 +14,23 @@ const collatzNext=(n:number)=>n%2===0?n/2:3*n+1;
 const sayNumber=(n:number)=>{const text=String(n);let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}return Number(result)};
 function make(id:string,category:string,sequence:number[],answer:number,rule:string,explanation:string,hints:[string,string,string],pattern:AnswerPattern):GeneratedPuzzle{
  const templateId=id.split(':')[0],rating=rateDifficulty(sequence,answer,pattern);
- return {id,templateId,category,difficulty:rating.difficulty,difficultyScore:rating.score,pattern,sequence,answer,rule,explanation,hints};
+ const specificHint=['visual-matrix','missing-middle','odd-term'].includes(templateId)?hints[2]:'Apply the pattern you identified to determine what comes next.';
+ return {id,templateId,category,difficulty:rating.difficulty,difficultyScore:rating.score,pattern,sequence,answer,rule,explanation,hints:[hints[0],hints[1],specificHint]};
 }
 const arithmetic: PuzzleTemplate={id:'arithmetic',category:'Arithmetic',generate:rng=>{
  const start=int(rng,-30,60),step=int(rng,1,12)*(rng()<.25?-1:1),count=int(rng,4,5),seq=Array.from({length:count},(_,i)=>start+i*step),answer=start+count*step;
  const action=step>0?'Add '+step:'Subtract '+Math.abs(step);return make('arithmetic:'+start+':'+step+':'+count,'Arithmetic',seq,answer,action,action+' each term; the next term is '+answer+'.',[ 'Compare the gaps between neighbors.','The difference stays the same.',action+' each time.'],{type:'arithmetic',step});
+}};
+const missingMiddle: PuzzleTemplate={id:'missing-middle',category:'Sequence completion',generate:rng=>{
+ const start=int(rng,-12,24),step=int(rng,2,9)*(rng()<.25?-1:1),terms=Array.from({length:5},(_,index)=>start+step*index),answerIndex=int(rng,1,3),answer=terms[answerIndex],shown=terms.filter((_,index)=>index!==answerIndex),position=answerIndex+1;
+ const puzzle=make('missing-middle:'+start+':'+step+':'+answerIndex,'Sequence completion',shown,answer,'Find the missing middle term','The sequence changes by '+(step>0?'adding '+step:'subtracting '+Math.abs(step))+' each time. The missing value is in position '+position+': '+answer+'.',['Compare the gaps between the values you can see.','The same step connects each neighboring pair, including the blank.','This sequence '+(step>0?'adds ':'subtracts ')+Math.abs(step)+' each time; find the value that fits position '+position+'.'],{type:'arithmetic',step});
+ return {...puzzle,taskFormat:'missing-middle',answerIndex};
+}};
+const oddTerm: PuzzleTemplate={id:'odd-term',category:'Pattern check',generate:rng=>{
+ const start=int(rng,-8,18),step=int(rng,2,8)*(rng()<.2?-1:1),terms=Array.from({length:5},(_,index)=>start+step*index),oddTermIndex=int(rng,1,3),adjustment=int(rng,3,9)*(rng()<.5?-1:1);
+ terms[oddTermIndex]+=adjustment;
+ const answer=terms[oddTermIndex],puzzle=make('odd-term:'+start+':'+step+':'+oddTermIndex+':'+adjustment,'Pattern check',terms,answer,'Find the term that breaks the pattern','The intended pattern changes by '+(step>0?'adding '+step:'subtracting '+Math.abs(step))+' each time. Term '+(oddTermIndex+1)+' is '+answer+', which does not fit; it should be '+(start+step*oddTermIndex)+'.',['Compare the gaps from one term to the next.','Four terms fit a steady step; look for the value that makes the gaps change.','The rule is '+(step>0?'add ':'subtract ')+Math.abs(step)+' each time. Find the displayed term that breaks it.'],{type:'arithmetic',step});
+ return {...puzzle,taskFormat:'find-odd-term',displaySequence:terms,oddTermIndex};
 }};
 const geometric: PuzzleTemplate={id:'geometric',category:'Multiplication',generate:rng=>{
  const factor=int(rng,2,3),count=int(rng,4,5),start=int(rng,1,5),seq=Array.from({length:count},(_,i)=>start*factor**i),answer=start*factor**count;
@@ -87,7 +99,90 @@ const primeGaps: PuzzleTemplate={id:'prime-gaps',category:'Number theory',genera
  const choice=int(rng,0,possibilities.length/2-1),start=possibilities[choice*2],firstGap=possibilities[choice*2+1],growth=2,count=6,terms=[start];let gap=firstGap;while(terms.length<count+1){terms.push(terms.at(-1)!+gap);gap+=growth}
  return make('prime-gaps:'+start+':'+firstGap,'Number theory',terms.slice(0,count),terms[count],'Prime numbers with growing gaps','The gaps grow by '+growth+': '+Array.from({length:count},(_,i)=>firstGap+i*growth).join(', ')+'. The next prime is '+terms[count]+'.',['These are not consecutive primes; compare the gaps.','Each gap increases by '+growth+'.','Add '+(firstGap+(count-1)*growth)+' to '+terms[count-1]+' to get '+terms[count]+'.'],{type:'prime-gaps',start,firstGap,growth});
 }};
-export const templates:PuzzleTemplate[]=[arithmetic,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,weightedRecurrence,reverseAdd,collatz,primeGaps];
+const alternatingSteps: PuzzleTemplate={id:'alternating-steps',category:'Alternating steps',generate:rng=>{
+ const start=int(rng,-15,20),oddStep=int(rng,2,9),evenStep=int(rng,-7,6),count=5,terms=[start];
+ while(terms.length<count+1){const index=terms.length-1;terms.push(terms.at(-1)!+(index%2===0?oddStep:evenStep))}
+ return make('alternating-steps:'+start+':'+oddStep+':'+evenStep,'Alternating steps',terms.slice(0,count),terms[count],'Alternate between two step sizes','The differences alternate between '+oddStep+' and '+evenStep+'. The next step is '+oddStep+', so the next term is '+terms[count]+'.',['Compare the gaps between neighboring terms.','There are two different gaps that repeat in turn.','Continue alternating the two step sizes.'],{type:'alternating',oddStep,evenStep});
+}};
+const alternatingOperations: PuzzleTemplate={id:'alternating-operations',category:'Alternating operations',generate:rng=>{
+ const start=int(rng,2,8),factorA=int(rng,2,3),factorB=int(rng,2,3),offsetA=int(rng,-3,4),offsetB=int(rng,-3,4),count=5,terms=[start];
+ while(terms.length<count+1){const index=terms.length-1;terms.push(terms.at(-1)!*(index%2===0?factorA:factorB)+(index%2===0?offsetA:offsetB))}
+ return make('alternating-operations:'+start+':'+factorA+':'+offsetA+':'+factorB+':'+offsetB,'Alternating operations',terms.slice(0,count),terms[count],'Alternate between two operations','Apply '+factorA+' times the previous term '+(offsetA<0?'minus '+Math.abs(offsetA):'plus '+offsetA)+' then '+factorB+' times the term '+(offsetB<0?'minus '+Math.abs(offsetB):'plus '+offsetB)+', alternating the steps. The next term is '+terms[count]+'.',['Check how each term changes into the next.','Two operations take turns repeating.','Continue alternating the two operations in the same order.'],{type:'alternating-operation',factorA,offsetA,factorB,offsetB});
+}};
+const matrixKinds: VisualShape['kind'][]=['triangle','diamond','pentagon','arrow'];
+type MatrixFamily=NonNullable<NonNullable<Puzzle['visualPattern']>['family']>;
+const pieceKey=(piece:VisualShape)=>[piece.kind,piece.fill,piece.rotation,piece.count??1,piece.slot??''].join(':');
+const tileKey=(tile:VisualTile)=>tile.map(pieceKey).sort().join('|');
+const piece=(kind:VisualShape['kind'],attrs:Partial<VisualShape>={}):VisualShape=>({kind,fill:'solid',rotation:0,...attrs});
+function distinctOptions(answer:VisualTile,candidates:VisualTile[],rng:()=>number,total=8){
+ const distinct:VisualTile[]=[];for(const option of [answer,...candidates])if(!distinct.some(item=>tileKey(item)===tileKey(option)))distinct.push(option);
+ if(distinct.length<total)throw new Error('Visual puzzle could not create enough distinct choices.');
+ const distractors=distinct.slice(1).map((_,index)=>index+1);
+ for(let index=distractors.length-1;index>0;index--){const swap=int(rng,0,index);[distractors[index],distractors[swap]]=[distractors[swap],distractors[index]]}
+ const order=[0,...distractors.slice(0,total-1)];
+ for(let index=order.length-1;index>0;index--){const swap=int(rng,0,index);[order[index],order[swap]]=[order[swap],order[index]]}
+ return {choices:order.map(index=>distinct[index]),answerIndex:order.indexOf(0)};
+}
+function makeVisualMatrix(rng:()=>number){
+ const families:MatrixFamily[]=['attribute-cycle','row-distribution','reflection','count-progression','shape-xor','shape-union','orbit-movement','analogy-transform'];
+ const family=families[int(rng,0,families.length-1)],matrixKinds3=matrixKinds.slice(0,3),fillStart=int(rng,0,1),fillByRow=rng()<.5,rotationByColumn=rng()<.5;
+ let rows:2|3=3,columns:2|3=3,missingIndex=6+int(rng,0,2),cells:(VisualTile|null)[]=[],answer:VisualTile=[],ruleText='',rules:string[]=[],taskFormat:NonNullable<NonNullable<Puzzle['visualPattern']>['taskFormat']>='complete-matrix',candidates:VisualTile[]=[];
+ const fillRule=fillByRow?'Fill alternates between rows.':'Fill alternates across columns.';
+ const rotationRule=rotationByColumn?'Each step to the right turns a shape 90° clockwise.':'Each step down turns a shape 90° clockwise.';
+ if(family==='shape-xor'||family==='shape-union'){
+  const offset=int(rng,0,2),base=matrixKinds3.map((_,i)=>piece(matrixKinds3[(i+offset)%3])),operator=family==='shape-xor'?'XOR':'union';
+  const combine=(left:VisualTile,right:VisualTile):VisualTile=>operator==='union'?base.filter(item=>left.some(v=>v.kind===item.kind)||right.some(v=>v.kind===item.kind)):base.filter(item=>left.some(v=>v.kind===item.kind)!==right.some(v=>v.kind===item.kind));
+  cells=[];
+  for(let row=0;row<3;row++){const a=[base[row],base[(row+1)%3]],b=[base[(row+1)%3],base[(row+2)%3]],result=combine(a,b);cells.push(a,b,row===2?null:result);if(row===2)answer=result}
+  missingIndex=8;rules.push(family,'set-operation');ruleText=operator==='XOR'?'In each row, the third tile keeps shapes that appear in exactly one of the first two tiles. A shared shape cancels out.':'In each row, combine the shapes from the first two tiles and keep each shape only once.';
+  const allSubsets=(mask:number):VisualTile=>base.filter((_,index)=>(mask&(1<<index))!==0);
+  candidates=Array.from({length:8},(_,i)=>allSubsets(i));
+ }else if(family==='analogy-transform'){
+  rows=2;columns=2;missingIndex=3;taskFormat='analogy';
+  const transform=int(rng,0,3),start=int(rng,0,3),shapeA=matrixKinds[start],shapeC=matrixKinds[(start+2)%4],turn=int(rng,0,3)*90;
+  const apply=(value:VisualShape):VisualShape=>transform===0?{...value,rotation:((value.rotation+90)%360) as VisualShape['rotation']}:transform===1?{...value,fill:value.fill==='solid'?'outline':'solid'}:transform===2?{...value,kind:matrixKinds[(matrixKinds.indexOf(value.kind)+1)%4]}:{...value,count:((value.count??1)%3+1) as 1|2|3};
+  const a=piece(shapeA,{rotation:turn as VisualShape['rotation'],fill:rng()<.5?'solid':'outline'}),b=apply(a),c=piece(shapeC,{rotation:((turn+180)%360) as VisualShape['rotation'],fill:a.fill,count:1}),d=apply(c);cells=[ [a],[b],[c],null ];answer=[d];
+  const variants:VisualTile[]=[[{...d,kind:matrixKinds[(matrixKinds.indexOf(d.kind)+1)%4]}],[{...d,kind:matrixKinds[(matrixKinds.indexOf(d.kind)+3)%4]}],[{...d,fill:d.fill==='solid'?'outline':'solid'}],[{...d,rotation:((d.rotation+90)%360) as VisualShape['rotation']}],[{...d,rotation:((d.rotation+180)%360) as VisualShape['rotation']}],[{...d,rotation:((d.rotation+270)%360) as VisualShape['rotation']}],[{...d,count:((d.count??1)%3+1) as 1|2|3}],[{...d,count:((d.count??1)%3+2) as 1|2|3}]];
+  candidates=variants;rules.push(['quarter-turn','fill-flip','shape-progression','count-progression'][transform]);
+  ruleText=transform===0?'The top pair shows a 90° clockwise turn. Apply the same turn to the bottom-left figure.':transform===1?'The top pair changes from solid to outline (or outline to solid). Apply that fill change to the bottom-left figure.':transform===2?'The top pair advances one shape in the cycle. Apply that same one-step shape change to the bottom-left figure.':'The top pair adds one shape, wrapping from three back to one. Apply that count change to the bottom-left figure.';
+ }else{
+  const shapeStart=int(rng,0,3),shapeStep=int(rng,1,3),offset=int(rng,0,2),rotationStart=int(rng,0,3)*90;
+  const cell=(row:number,column:number):VisualShape=>{
+   let kind:VisualShape['kind'];
+   if(family==='row-distribution')kind=matrixKinds3[(row+column+offset)%3];
+   else if(family==='reflection')kind=matrixKinds[(shapeStart+Math.min(column,2-column)+row*shapeStep)%4];
+   else if(family==='count-progression'||family==='orbit-movement')kind=matrixKinds[shapeStart];
+   else kind=matrixKinds[(shapeStart+(row+column)*shapeStep)%4];
+   const count=family==='count-progression'?((row+column+offset)%3+1) as 1|2|3:1;
+   const orbit:[0|1|2|3,0|1|2|3,0|1|2|3,0|1|2|3]=[0,1,3,2];
+   const slot=family==='orbit-movement'?orbit[(row+column+offset)%4]:undefined;
+   const fill=family==='count-progression'||family==='orbit-movement'?'solid':(fillStart+(fillByRow?row:column))%2===0?'solid':'outline';
+   const rotation=family==='orbit-movement'||family==='count-progression'?0:((rotationStart+(rotationByColumn?column:row)*90)%360) as VisualShape['rotation'];
+   return piece(kind,{count,slot,fill,rotation});
+  };
+  cells=Array.from({length:9},(_,index)=>index===missingIndex?null:[cell(Math.floor(index/3),index%3)]);answer=[cell(Math.floor(missingIndex/3),missingIndex%3)];
+  if(family==='row-distribution'){rules.push('distribute-three');ruleText='Each row and column contains one triangle, one diamond, and one pentagon, in a shifted order.'}
+  else if(family==='reflection'){rules.push('reflection','row-progression');ruleText='Each row mirrors its outer shapes around the center column, while the shape pattern shifts as you move down.'}
+  else if(family==='count-progression'){rules.push('count-progression');ruleText='The number of shapes increases by one moving right, then wraps from three back to one. The starting count shifts on each new row.'}
+  else if(family==='orbit-movement'){rules.push('position-orbit');ruleText='The same shape moves through the four corners of each tile in a repeating clockwise cycle as you move through the grid.'}
+  else {rules.push('shape-progression');const places=shapeStep===1?'one place':shapeStep===2?'two places':'three places';ruleText='Each move right or down advances '+places+' in the shape cycle ('+matrixKinds.join(' → ')+'), wrapping back to the start.'}
+  if(family!=='count-progression'&&family!=='orbit-movement'){ruleText+=' '+fillRule+' '+rotationRule;rules.push('fill-'+(fillByRow?'row':'column'),'rotation-'+(rotationByColumn?'column':'row'))}
+  const correct=answer[0];candidates=[[{...correct,kind:matrixKinds[(matrixKinds.indexOf(correct.kind)+1)%4]}],[{...correct,kind:matrixKinds[(matrixKinds.indexOf(correct.kind)+3)%4]}],[{...correct,fill:correct.fill==='solid'?'outline':'solid'}],[{...correct,rotation:((correct.rotation+90)%360) as VisualShape['rotation']}],[{...correct,rotation:((correct.rotation+270)%360) as VisualShape['rotation']}],[{...correct,count:((correct.count??1)%3+1) as 1|2|3}],[{...correct,slot:((correct.slot??0)+1)%4 as 0|1|2|3}]];
+ }
+ const options=distinctOptions(answer,candidates,rng,8),choices=options.choices,answerIndex=options.answerIndex;
+ const position='row '+(Math.floor(missingIndex/columns)+1)+', column '+(missingIndex%columns+1),letter=String.fromCharCode(65+answerIndex),slotNames=['top-left','top-right','bottom-left','bottom-right'],answerDescription=answer.map(item=>(item.count??1)+' '+item.fill+' '+item.kind+(item.slot===undefined?'':' in the '+slotNames[item.slot])).join(' and ');
+ const explanation=family==='analogy-transform'?'Option '+letter+' completes the analogy. '+ruleText+' The answer is '+answerDescription+'.':'Option '+letter+' completes '+position+' with '+answerDescription+'. '+ruleText;
+ const kindAnswer=answerIndex;
+ const puzzleRule=family==='analogy-transform'?'Complete the visual analogy':'Complete the shape pattern';
+ if(cells.filter(value=>value===null).length!==1||cells[missingIndex]!==null||choices.length!==8||new Set(choices.map(tileKey)).size!==8||tileKey(choices[kindAnswer])!==tileKey(answer)||!explanation.includes(ruleText))throw new Error('Generated visual puzzle failed rule, answer, or choice validation.');
+ return {cells,choices,answerIndex,missingIndex,rows,columns,family,ruleTypes:rules,taskFormat,explanation,ruleText,answer,puzzleRule};
+}
+const shapePattern: PuzzleTemplate={id:'visual-matrix',category:'Visual reasoning',generate:rng=>{
+ const visual=makeVisualMatrix(rng),{answerIndex,explanation,ruleText}=visual;
+ const p=make('visual-matrix:'+visual.family+':'+visual.missingIndex+':'+visual.cells.map(value=>value?tileKey(value):'?').join(','),'Visual reasoning',[0,1,2,3],answerIndex,visual.puzzleRule,explanation,['Look at how the figures relate across the rows or pairs.','Identify whether the rule uses shape, count, position, rotation, fill, or combining.','Apply the '+visual.family!.replaceAll('-',' ')+' rule: '+ruleText],{type:'visual-matrix',shapeStep:1,fillByRow:false,rotationByColumn:false});
+ return {...p,visualPattern:{cells:visual.cells,choices:visual.choices,answerIndex,missingIndex:visual.missingIndex,rows:visual.rows,columns:visual.columns,family:visual.family,ruleTypes:visual.ruleTypes,taskFormat:visual.taskFormat}};
+}};
+export const templates:PuzzleTemplate[]=[arithmetic,missingMiddle,oddTerm,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,weightedRecurrence,reverseAdd,collatz,primeGaps,alternatingSteps,alternatingOperations,shapePattern];
 export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
  const recent=new Set(recentIds.slice(-30));
  const recentTemplates=new Set(recentIds.slice(-4).map(id=>id.split(':',1)[0]));

@@ -8,10 +8,13 @@ type DailyPuzzle = AuthoredPuzzle | (Puzzle & { pattern: AuthoredPuzzle['pattern
 
 function deriveTerms(puzzle: DailyPuzzle): number[] {
   const { sequence, pattern } = puzzle;
+  if (puzzle.taskFormat === 'find-odd-term') return [...(puzzle.displaySequence ?? sequence)];
+  const observed = [...sequence];
+  if (puzzle.answerIndex !== undefined) observed.splice(puzzle.answerIndex, 0, puzzle.answer);
   const count = sequence.length + 1;
   switch (pattern.type) {
     case 'arithmetic':
-      return Array.from({ length: count }, (_, index) => sequence[0] + index * pattern.step);
+      return Array.from({ length: count }, (_, index) => observed[0] + index * pattern.step);
     case 'geometric':
       return Array.from({ length: count }, (_, index) => sequence[0] * pattern.factor ** index);
     case 'power':
@@ -21,10 +24,16 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
       while (terms.length < count) terms.push(terms.at(-1)! + terms.at(-2)!);
       return terms;
     }
-    case 'alternating':
+    case 'alternating': {
+      if (puzzle.id.startsWith('alternating-steps:')) {
+        const terms = [sequence[0]];
+        while (terms.length < count) { const index = terms.length - 1; terms.push(terms.at(-1)! + (index % 2 === 0 ? pattern.oddStep : pattern.evenStep)); }
+        return terms;
+      }
       return Array.from({ length: count }, (_, index) => index % 2 === 0
         ? sequence[0] + (index / 2) * pattern.oddStep
         : sequence[1] + ((index - 1) / 2) * pattern.evenStep);
+    }
     case 'increasing-difference': {
       const terms = [sequence[0]];
       let difference = pattern.firstDifference;
@@ -98,25 +107,38 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
       while (terms.length < count) { terms.push(terms.at(-1)! + gap); gap += pattern.growth; }
       return terms;
     }
+    case 'shape-cycle':
+      return Array.from({ length: count }, (_, index) => (sequence[0] + index * pattern.step) % 8);
+    case 'visual-matrix':
+      return [...sequence, puzzle.answer];
   }
 }
 
 function checkPuzzle(puzzle: DailyPuzzle) {
-  expect(puzzle.pattern.type).not.toBe('alternating');
-  expect(puzzle.pattern.type).not.toBe('alternating-operation');
+  if (puzzle.visualPattern) {
+    expect(puzzle.visualPattern.cells).toHaveLength((puzzle.visualPattern.rows ?? 3) * (puzzle.visualPattern.columns ?? 3));
+    expect(puzzle.visualPattern.cells[puzzle.visualPattern.missingIndex ?? 8]).toBeNull();
+    expect(puzzle.visualPattern.choices).toHaveLength(8);
+    expect(new Set(puzzle.visualPattern.choices.map((choice) => JSON.stringify(choice))).size).toBe(8);
+    expect(puzzle.visualPattern.choices[puzzle.visualPattern.answerIndex]).toBeDefined();
+  }
   if (puzzle.pattern.type === 'collatz') {
     const visibleTransitions = puzzle.sequence.slice(0, -1);
     expect(visibleTransitions.some((value) => value % 2 === 0)).toBe(true);
     expect(visibleTransitions.some((value) => value % 2 !== 0)).toBe(true);
   }
-  expect(deriveTerms(puzzle)).toEqual([...puzzle.sequence, puzzle.answer]);
+  const expectedTerms = puzzle.taskFormat === 'find-odd-term'
+    ? [...(puzzle.displaySequence ?? puzzle.sequence)]
+    : [...puzzle.sequence];
+  if (puzzle.taskFormat !== 'find-odd-term') expectedTerms.splice(puzzle.answerIndex ?? expectedTerms.length, 0, puzzle.answer);
+  expect(deriveTerms(puzzle), puzzle.id+' ('+puzzle.taskFormat+')').toEqual(expectedTerms);
   expect([...puzzle.sequence, puzzle.answer].every(Number.isSafeInteger)).toBe(true);
   expect([...puzzle.sequence, puzzle.answer].every((value) => Math.abs(value) <= 1_000_000)).toBe(true);
   expect(puzzle.hints).toHaveLength(3);
   expect(puzzle.hints.every((hint) => hint.trim().length >= 4)).toBe(true);
   expect(new Set(puzzle.hints.map((hint) => hint.trim().toLowerCase())).size).toBe(3);
   expect(puzzle.rule.trim().length).toBeGreaterThan(2);
-  expect(puzzle.explanation.split(/[^0-9-]+/).includes(String(puzzle.answer)), puzzle.id + ': ' + puzzle.explanation + ' (answer ' + puzzle.answer + ')').toBe(true);
+  if (puzzle.pattern.type !== 'visual-matrix') expect(puzzle.explanation.split(/[^0-9-]+/).includes(String(puzzle.answer)), puzzle.id + ': ' + puzzle.explanation + ' (answer ' + puzzle.answer + ')').toBe(true);
   if ('difficultyScore' in puzzle) {
     expect(rateDifficulty(puzzle.sequence, puzzle.answer, puzzle.pattern)).toEqual({
       score: puzzle.difficultyScore,
@@ -139,9 +161,20 @@ describe('generated Daily Challenge', () => {
     expect(first).not.toBeNull();
     expect(second).not.toBeNull();
     expect(first!.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
+    expect(first!.some((puzzle) => puzzle.visualPattern)).toBe(true);
     expect(dailyIds(date)).toEqual(first!.map((puzzle) => puzzle.id));
     expect(second!.map((puzzle) => puzzle.id)).toEqual(first!.map((puzzle) => puzzle.id));
     expect(hasDailyComposition(dailyIds(date)!)).toBe(true);
+  });
+
+  it('always supplies five puzzles and a shape puzzle across the 50-day preview window', () => {
+    for (let day = 0; day < 50; day += 1) {
+      const lineup = dailyPuzzles(dateOffset('2026-11-02', day));
+      expect(lineup, 'no lineup for preview day ' + day).not.toBeNull();
+      expect(lineup).toHaveLength(5);
+      expect(lineup!.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
+      expect(lineup!.at(-1)?.visualPattern).toBeDefined();
+    }
   });
 
   it('derives every displayed answer from its declared rule and provides usable clues', () => {
@@ -153,7 +186,11 @@ describe('generated Daily Challenge', () => {
   });
 
   it('never repeats an exact puzzle within any rolling 15-date window', () => {
-    const signature = (puzzle: DailyPuzzle) => JSON.stringify([puzzle.sequence, puzzle.answer]);
+    const signature = (puzzle: DailyPuzzle) => JSON.stringify([
+      puzzle.visualPattern?.cells ?? puzzle.shapePattern?.sequence ?? puzzle.sequence,
+      puzzle.visualPattern?.choices ?? puzzle.shapePattern?.choices ?? null,
+      puzzle.visualPattern?.answerIndex ?? puzzle.shapePattern?.answer ?? puzzle.answer,
+    ]);
     const recent: Set<string>[] = [];
     for (let day = -14; day < 0; day += 1) {
       const lineup = dailyPuzzles(dateOffset('2026-11-02', day));
@@ -188,7 +225,7 @@ describe('generated Daily Challenge', () => {
       const lineup = dailyPuzzles(dateOffset('2026-11-02', day));
       expect(lineup).not.toBeNull();
       const currentPatterns = lineup!.map((puzzle) => puzzle.pattern.type);
-      expect(currentPatterns.filter((pattern) => previousPatterns.has(pattern))).toEqual([]);
+      expect(currentPatterns.filter((pattern) => pattern !== 'visual-matrix' && pattern !== 'shape-cycle' && previousPatterns.has(pattern))).toEqual([]);
       previousPatterns = new Set(currentPatterns);
     }
   });
