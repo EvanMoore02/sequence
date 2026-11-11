@@ -22,6 +22,31 @@ async function getTodayAnswers(page: Page) {
   });
 }
 
+async function submitDailyAnswer(page: Page, numericAnswers?: number[]) {
+  const current = await page.evaluate(async () => {
+    const state = JSON.parse(localStorage.getItem('sequence.prototype.v1') || 'null');
+    const now = new Date();
+    const date = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const [{ dailyPuzzles }, { missingTerms }] = await Promise.all([
+      import('/src/engine/dailyGenerator.ts'),
+      import('/src/engine/missingTerms.ts'),
+    ]);
+    const puzzle = dailyPuzzles(date)?.[state.run.index];
+    if (!puzzle) throw new Error('Current Daily puzzle is unavailable');
+    return {
+      visualOption: puzzle.visualPattern ? String.fromCharCode(65 + puzzle.visualPattern.answerIndex) : null,
+      answers: missingTerms(puzzle),
+    };
+  });
+
+  if (current.visualOption) {
+    await page.getByRole('button', { name: new RegExp('^Option ' + current.visualOption + ':') }).click();
+  } else {
+    await page.getByLabel('Your answer').fill((numericAnswers ?? current.answers).join(', '));
+  }
+  await page.getByRole('button', { name: /submit answer/i }).click();
+}
+
 test('first visit shows the guide and Help can reopen it', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
@@ -41,9 +66,7 @@ test('Daily skip gives zero points and continues through the challenge', async (
   await expect(page.getByRole('dialog')).toContainText('0 pts');
   await page.getByRole('button', { name: /next puzzle/i }).click();
   for (let index = 1; index < 5; index += 1) {
-    const answers = await page.evaluate(async () => { const now = new Date(); const date = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0'); const { dailyPuzzles } = await import('/src/engine/dailyGenerator.ts'); const { missingTerms } = await import('/src/engine/missingTerms.ts'); return missingTerms(dailyPuzzles(date)![JSON.parse(localStorage.getItem('sequence.prototype.v1')!).run.index]); });
-    await page.getByLabel('Your answer').fill(answers.join(', '));
-    await page.getByRole('button', { name: /submit answer/i }).click();
+    await submitDailyAnswer(page);
     if (index < 4) await page.getByRole('button', { name: /next puzzle/i }).click();
   }
   await expect(page.getByText('DAILY CHALLENGE COMPLETE')).toBeVisible();
@@ -73,8 +96,7 @@ test('Daily Challenge resumes, follows the difficulty order, and shows results',
 
   for (let index = 0; index < puzzles.length; index += 1) {
     await expect(page.locator('.difficulty')).toHaveCount(0);
-    await page.getByLabel('Your answer').fill(puzzles[index].answers.join(', '));
-    await page.getByRole('button', { name: /submit answer/i }).click();
+    await submitDailyAnswer(page, puzzles[index].answers);
     if (index < puzzles.length - 1) {
       await expect(page.locator('.explain')).toBeVisible();
       await page.getByRole('button', { name: /next puzzle/i }).click();
@@ -94,9 +116,7 @@ test('skipping the fifth Daily puzzle completes the challenge for 0 points', asy
   await openFreshGame(page);
   await page.getByRole('button', { name: /play today.s challenge/i }).click();
   for (let index = 0; index < 4; index += 1) {
-    const answers = await page.evaluate(async () => { const now = new Date(); const date = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0'); const { dailyPuzzles } = await import('/src/engine/dailyGenerator.ts'); const { missingTerms } = await import('/src/engine/missingTerms.ts'); const state = JSON.parse(localStorage.getItem('sequence.prototype.v1')!); return missingTerms(dailyPuzzles(date)![state.run.index]); });
-    await page.getByLabel('Your answer').fill(answers.join(', '));
-    await page.getByRole('button', { name: /submit answer/i }).click();
+    await submitDailyAnswer(page);
     await page.getByRole('button', { name: /next puzzle/i }).click();
   }
   await page.getByRole('button', { name: /skip puzzle.*0 points/i }).click();
