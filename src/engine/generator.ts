@@ -12,9 +12,32 @@ const nextPrime=(n:number)=>{let value=n+1;while(!isPrime(value))value++;return 
 const reverseDigits=(n:number)=>Number(String(n).split('').reverse().join(''));
 const collatzNext=(n:number)=>n%2===0?n/2:3*n+1;
 const sayNumber=(n:number)=>{const text=String(n);let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}return Number(result)};
+function patternEquation(pattern:AnswerPattern):string{
+ switch(pattern.type){
+  case 'arithmetic':return 'For consecutive terms, next = current '+(pattern.step<0?'- '+Math.abs(pattern.step):'+ '+pattern.step)+'.';
+  case 'geometric':return 'For consecutive terms, next = current × '+pattern.factor+'.';
+  case 'power':return 'Term k = k^'+pattern.exponent+' for consecutive values of k.';
+  case 'fibonacci':return 'Term n = term (n - 1) + term (n - 2).';
+  case 'alternating':return pattern.byPosition?'Odd-position terms: next = current + '+pattern.oddStep+'; even-position terms: next = current + '+pattern.evenStep+'.':'Next = current + alternating step; the steps alternate between '+pattern.oddStep+' and '+pattern.evenStep+'.';
+  case 'increasing-difference':return 'Next gap = previous gap + '+pattern.growth+'; next term = current term + next gap.';
+  case 'doubling-difference':return 'Next gap = previous gap × 2; next term = current term + next gap.';
+  case 'multiply-adjust':return 'For consecutive terms, next = current × '+pattern.factor+(pattern.offset<0?' - '+Math.abs(pattern.offset):' + '+pattern.offset)+'.';
+  case 'factorial':return 'Next term = current term × next integer multiplier.';
+  case 'triangular':return 'Term k = k × (k + 1) / 2 for consecutive values of k.';
+  case 'look-and-say':return 'Next term = read off the runs of digits in the current term.';
+  case 'alternating-operation':return 'Alternate these rules: next = current × '+pattern.factorA+(pattern.offsetA<0?' - '+Math.abs(pattern.offsetA):' + '+pattern.offsetA)+', then next = current × '+pattern.factorB+(pattern.offsetB<0?' - '+Math.abs(pattern.offsetB):' + '+pattern.offsetB)+'.';
+  case 'weighted-recurrence':return 'Next = current × '+pattern.factor+' + previous term'+(pattern.offset<0?' - '+Math.abs(pattern.offset):' + '+pattern.offset)+'.';
+  case 'reverse-add':return 'Next = current + the number formed by reversing its digits.';
+  case 'collatz':return 'If current is even, next = current / 2; if odd, next = 3 × current + 1.';
+  case 'prime-gaps':return 'Next gap = previous gap + '+pattern.growth+'; next term = current prime + next gap.';
+  case 'prime':return 'Each term is the next prime number.';
+  case 'shape-cycle':return 'Each step advances '+pattern.step+' place(s) in the repeating shape cycle.';
+  case 'visual-matrix':return 'Apply the same visual transformation across the row or pair.';
+ }
+}
 function make(id:string,category:string,sequence:number[],answer:number,rule:string,explanation:string,hints:[string,string,string],pattern:AnswerPattern):GeneratedPuzzle{
  const templateId=id.split(':')[0],rating=rateDifficulty(sequence,answer,pattern);
- const specificHint=['visual-matrix','missing-middle','odd-term'].includes(templateId)?hints[2]:'Apply the pattern you identified to determine what comes next.';
+ const specificHint=templateId==='visual-matrix'?hints[2]:patternEquation(pattern);
  return {id,templateId,category,difficulty:rating.difficulty,difficultyScore:rating.score,pattern,sequence,answer,rule,explanation,hints:[hints[0],hints[1],specificHint]};
 }
 const arithmetic: PuzzleTemplate={id:'arithmetic',category:'Arithmetic',generate:rng=>{
@@ -179,7 +202,7 @@ function makeVisualMatrix(rng:()=>number){
 }
 const shapePattern: PuzzleTemplate={id:'visual-matrix',category:'Visual reasoning',generate:rng=>{
  const visual=makeVisualMatrix(rng),{answerIndex,explanation,ruleText}=visual;
- const p=make('visual-matrix:'+visual.family+':'+visual.missingIndex+':'+visual.cells.map(value=>value?tileKey(value):'?').join(','),'Visual reasoning',[0,1,2,3],answerIndex,visual.puzzleRule,explanation,['Look at how the figures relate across the rows or pairs.','Identify whether the rule uses shape, count, position, rotation, fill, or combining.','Apply the '+visual.family!.replaceAll('-',' ')+' rule: '+ruleText],{type:'visual-matrix',shapeStep:1,fillByRow:false,rotationByColumn:false});
+ const p=make('visual-matrix:'+visual.family+':'+visual.missingIndex+':'+visual.cells.map(value=>value?tileKey(value):'?').join(','),'Visual reasoning',[0,1,2,3],answerIndex,visual.puzzleRule,explanation,['Compare tiles in the same row or column. What changes from one tile to the next?','Track one feature at a time: shape, number, fill, direction, or position. Check whether that change repeats.',ruleText],{type:'visual-matrix',shapeStep:1,fillByRow:false,rotationByColumn:false});
  return {...p,visualPattern:{cells:visual.cells,choices:visual.choices,answerIndex,missingIndex:visual.missingIndex,rows:visual.rows,columns:visual.columns,family:visual.family,ruleTypes:visual.ruleTypes,taskFormat:visual.taskFormat}};
 }};
 export const templates:PuzzleTemplate[]=[arithmetic,missingMiddle,oddTerm,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,lookAndSay,weightedRecurrence,reverseAdd,collatz,primeGaps,alternatingSteps,alternatingOperations,shapePattern];

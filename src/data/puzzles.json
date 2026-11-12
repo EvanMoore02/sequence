@@ -16,8 +16,8 @@
       "explanation": "Each number increases by 2, so the next number is 10.",
       "hints": [
         "Compare the gaps.",
-        "The difference stays constant.",
-        "Add 2 each time."
+        "Measure each gap: they are all equal.",
+        "For consecutive terms, next = current + 2."
       ],
       "pattern": {
         "type": "arithmetic",
@@ -39,8 +39,8 @@
       "explanation": "Each number increases by 3, so the next number is 15.",
       "hints": [
         "Notice how much the numbers change.",
-        "The same amount is added each time.",
-        "Add 3 each time."
+        "The gaps are equal, so check the amount between neighbors.",
+        "For consecutive terms, next = current + 3."
       ],
       "pattern": {
         "type": "arithmetic",
@@ -62,8 +62,8 @@
       "explanation": "Each number decreases by 5, so the next number is 10.",
       "hints": [
         "The sequence goes down.",
-        "Check the differences.",
-        "Subtract 5 each time."
+        "Compare consecutive terms to find the repeated decrease.",
+        "For consecutive terms, next = current - 5."
       ],
       "pattern": {
         "type": "arithmetic",
@@ -85,8 +85,8 @@
       "explanation": "Each number is twice the one before it, so the next number is 32.",
       "hints": [
         "Compare neighbors.",
-        "The same multiplier repeats.",
-        "Multiply by 2."
+        "Divide a term by the one before it; the ratio is constant.",
+        "For consecutive terms, next = current × 2."
       ],
       "pattern": {
         "type": "geometric",
@@ -105,11 +105,11 @@
       ],
       "answer": 25,
       "rule": "Square numbers",
-      "explanation": "These are 1\u00b2, 2\u00b2, 3\u00b2, and 4\u00b2; the next is 5\u00b2 = 25.",
+      "explanation": "These are 1², 2², 3², and 4²; the next is 5² = 25.",
       "hints": [
         "These grow faster each step.",
-        "Each is a number times itself.",
-        "The next is 5\u00b2."
+        "The terms are squares of consecutive counting numbers.",
+        "Term n = n²."
       ],
       "pattern": {
         "type": "power",
@@ -133,8 +133,8 @@
       "explanation": "Each term is the sum of the two before it: 3 + 5 = 8.",
       "hints": [
         "Look back two positions.",
-        "Each term uses the two before it.",
-        "Add 3 and 5."
+        "To get a term, combine both immediately preceding terms.",
+        "Term n = term (n - 1) + term (n - 2)."
       ],
       "pattern": {
         "type": "fibonacci"
@@ -156,13 +156,14 @@
       "explanation": "Odd positions increase by 2; even positions increase by 10, so the next number is 30.",
       "hints": [
         "Split positions into two groups.",
-        "Odd and even positions differ.",
-        "Even-position values go 10, 20, 30."
+        "Track odd and even positions separately; each has its own step.",
+        "Odd terms: next = current + 2; even terms: next = current + 10."
       ],
       "pattern": {
         "type": "alternating",
         "oddStep": 2,
-        "evenStep": 10
+        "evenStep": 10,
+        "byPosition": true
       }
     },
     {
@@ -181,8 +182,8 @@
       "explanation": "The gaps are 3, 5, 7, and 9; next add 11 to get 36.",
       "hints": [
         "Look at the differences.",
-        "Differences increase by 2.",
-        "Add 11 to 25."
+        "The gaps are consecutive odd numbers, each 2 larger than the last.",
+        "Gap n = previous gap + 2."
       ],
       "pattern": {
         "type": "increasing-difference",
@@ -206,8 +207,8 @@
       "explanation": "The gaps are 1, 2, 4, and 8. Next add 16 to get 33.",
       "hints": [
         "Compare the differences.",
-        "Differences double.",
-        "Add 16 to 17."
+        "Each gap is twice the gap immediately before it.",
+        "Gap n = 2 × previous gap."
       ],
       "pattern": {
         "type": "doubling-difference",
@@ -229,8 +230,8 @@
       "explanation": "Each number is multiplied by 3, so the next is 243.",
       "hints": [
         "Check the ratios.",
-        "The multiplier repeats.",
-        "Multiply by 3."
+        "Divide each term by the one before it to see the repeating ratio.",
+        "For consecutive terms, next = current × 3."
       ],
       "pattern": {
         "type": "geometric",
@@ -249,11 +250,11 @@
       ],
       "answer": 125,
       "rule": "Cube numbers",
-      "explanation": "These are 1\u00b3, 2\u00b3, 3\u00b3, and 4\u00b3; next is 5\u00b3 = 125.",
+      "explanation": "These are 1³, 2³, 3³, and 4³; next is 5³ = 125.",
       "hints": [
         "Growth is faster than squares.",
-        "Each term is multiplied by itself three times.",
-        "The next is 5\u00b3."
+        "The terms are cubes of consecutive counting numbers.",
+        "Term n = n³."
       ],
       "pattern": {
         "type": "power",
@@ -276,8 +277,8 @@
       "explanation": "Subtract 4, 8, and 16; next subtract 32 to get 40.",
       "hints": [
         "Look at gaps.",
-        "The amount subtracted doubles.",
-        "Subtract 32 from 72."
+        "The gaps are negative and double in size at each step.",
+        "Gap n = 2 × previous gap."
       ],
       "pattern": {
         "type": "doubling-difference",
@@ -296,11 +297,11 @@
       ],
       "answer": 122,
       "rule": "Multiply by 3, then subtract 1",
-      "explanation": "Each term is previous \u00d7 3 \u2212 1: 41 \u00d7 3 \u2212 1 = 122.",
+      "explanation": "Each term is previous × 3 − 1: 41 × 3 − 1 = 122.",
       "hints": [
         "Try multiplication and an adjustment.",
-        "Multiply by 3 and subtract 1.",
-        "41 \u00d7 3 \u2212 1 = 122."
+        "After multiplying a term, apply the same small adjustment each time.",
+        "For consecutive terms, next = current × 3 - 1."
       ],
       "pattern": {
         "type": "multiply-adjust",
@@ -324,13 +325,14 @@
       "explanation": "Odd positions count 1, 2, 3; even positions count by tens. The next even-position value is 30.",
       "hints": [
         "Two patterns are interleaved.",
-        "Read positions 2 and 4.",
-        "The next even-position value is 30."
+        "The even positions form their own sequence, counting by tens.",
+        "Even-position term n = 10 × n."
       ],
       "pattern": {
         "type": "alternating",
         "oddStep": 1,
-        "evenStep": 10
+        "evenStep": 10,
+        "byPosition": true
       }
     },
     {
@@ -349,8 +351,8 @@
       "explanation": "Multiply by 2, 3, 4, and 5; next multiply by 6 to get 720.",
       "hints": [
         "Look at the ratios.",
-        "Multipliers count upward.",
-        "Multiply 120 by 6."
+        "Each term multiplies by the next counting number.",
+        "Term n = term (n - 1) × n."
       ],
       "pattern": {
         "type": "factorial",
@@ -372,8 +374,8 @@
       "explanation": "Multiply by 3, 4, and 5; next multiply 120 by 6 to get 720.",
       "hints": [
         "Compare each term with the one before it.",
-        "The multiplier rises by one each time.",
-        "Multiply 120 by 6."
+        "The multiplier is one more than the multiplier used previously.",
+        "Term n = term (n - 1) × n."
       ],
       "pattern": {
         "type": "factorial",
@@ -395,8 +397,8 @@
       "explanation": "The gaps are 5, 15, and 25; the next gap is 35, giving 130.",
       "hints": [
         "Find the gaps between consecutive terms.",
-        "The gaps increase by the same amount each time.",
-        "The next gap is 35."
+        "The gaps form an arithmetic sequence with a constant increase.",
+        "Gap n = previous gap + 10."
       ],
       "pattern": {
         "type": "increasing-difference",
@@ -416,11 +418,11 @@
       ],
       "answer": 163,
       "rule": "Multiply by 3, then subtract 2",
-      "explanation": "Each term is the previous term times 3 minus 2; 55 \u00d7 3 \u2212 2 = 163.",
+      "explanation": "Each term is the previous term times 3 minus 2; 55 × 3 − 2 = 163.",
       "hints": [
         "Look for a repeated multiplication with a small adjustment.",
-        "Multiply by 3, then subtract 2.",
-        "55 \u00d7 3 \u2212 2 gives the next term."
+        "Use the same multiplier and then the same adjustment on every term.",
+        "For consecutive terms, next = current × 3 - 2."
       ],
       "pattern": {
         "type": "multiply-adjust",
@@ -440,11 +442,11 @@
       ],
       "answer": 364,
       "rule": "Multiply by 3, then add 1",
-      "explanation": "Each term is the previous term times 3 plus 1; 121 \u00d7 3 + 1 = 364.",
+      "explanation": "Each term is the previous term times 3 plus 1; 121 × 3 + 1 = 364.",
       "hints": [
         "Compare each pair using multiplication.",
-        "Multiply by 3, then make a small adjustment.",
-        "121 \u00d7 3 + 1 gives the next term."
+        "The same multiplier is followed by the same positive adjustment each time.",
+        "For consecutive terms, next = current × 3 + 1."
       ],
       "pattern": {
         "type": "multiply-adjust",
