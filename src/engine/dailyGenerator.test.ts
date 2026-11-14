@@ -174,6 +174,8 @@ describe('generated Daily Challenge', () => {
       expect(lineup).toHaveLength(5);
       expect(lineup!.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
       expect(lineup!.at(-1)?.visualPattern).toBeDefined();
+      expect(lineup!.at(-1)?.visualPattern?.rows).not.toBe(2);
+      expect(lineup!.at(-1)?.visualPattern?.columns).not.toBe(2);
     }
   });
 

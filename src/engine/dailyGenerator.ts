@@ -31,6 +31,10 @@ function isShapePuzzle(puzzle: DailyPuzzle): boolean {
   return Boolean(puzzle.visualPattern || puzzle.shapePattern || puzzle.pattern.type === 'shape-cycle' || puzzle.pattern.type === 'visual-matrix');
 }
 
+function isTwoByTwoPuzzle(puzzle: DailyPuzzle): boolean {
+  return puzzle.visualPattern?.rows === 2 && puzzle.visualPattern.columns === 2;
+}
+
 function varietyKey(puzzle: DailyPuzzle): string {
   if (puzzle.visualPattern) return 'visual:' + (puzzle.visualPattern.family ?? 'matrix') + ':' + (puzzle.visualPattern.taskFormat ?? 'matrix') + ':' + (puzzle.visualPattern.rows ?? 3) + 'x' + (puzzle.visualPattern.columns ?? 3) + ':' + (puzzle.visualPattern.ruleTypes ?? []).join('+');
   return puzzle.pattern.type + ':' + (puzzle.taskFormat ?? 'next-term');
@@ -143,7 +147,7 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
       for (let step = 0; step < pool.length; step += 1) {
         const candidate = pool[(start + step) % pool.length];
         const shapeSlot = slot === lineupOrder.length - 1;
-      if (shapeSlot !== isShapePuzzle(candidate)) continue;
+        if (shapeSlot !== isShapePuzzle(candidate) || (shapeSlot && isTwoByTwoPuzzle(candidate))) continue;
         if (usedSignatures.has(signature(candidate)) || previousIds.has(candidate.id)) continue;
         const variety = varietyKey(candidate);
         if (pass === 0 && previousPatterns.has(dailyRuleKey(candidate))) continue;
@@ -172,7 +176,7 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
   for (let slot = 0; slot < lineupOrder.length; slot += 1) {
     const pool = available[lineupOrder[slot]];
     const shapeSlot = slot === lineupOrder.length - 1;
-    const candidate = pool.find((item) => isShapePuzzle(item) === shapeSlot && !blocked.has(signature(item)));
+    const candidate = pool.find((item) => isShapePuzzle(item) === shapeSlot && !(shapeSlot && isTwoByTwoPuzzle(item)) && !blocked.has(signature(item)));
     if (!candidate) throw new Error('The Daily Challenge candidate pool is smaller than its 15-day repeat window.');
     selected.push(candidate);
     blocked.add(signature(candidate));
@@ -233,7 +237,8 @@ export function hasDailyComposition(ids: string[]): boolean {
   const puzzlesForIds = ids.map((id) => byId.get(id));
   if (puzzlesForIds.some((puzzle) => !puzzle)) return false;
   const hasRequiredDifficultyOrder = puzzlesForIds.every((puzzle, index) => puzzle!.difficulty === lineupOrder[index]);
-  return hasRequiredDifficultyOrder && puzzlesForIds.some((puzzle) => isShapePuzzle(puzzle!)) && new Set(ids).size === 5;
+  const finalPuzzle = puzzlesForIds[4]!;
+  return hasRequiredDifficultyOrder && puzzlesForIds.some((puzzle) => isShapePuzzle(puzzle!)) && Boolean(finalPuzzle.visualPattern) && !isTwoByTwoPuzzle(finalPuzzle) && new Set(ids).size === 5;
 }
 
 export function isCurrentDailyIds(date: string, ids: string[]): boolean {

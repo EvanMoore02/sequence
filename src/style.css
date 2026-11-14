@@ -47,3 +47,4 @@
 :root[data-theme=dark] .tutorial-dialog .tutorial-done{background:#52785a;color:#fff}
 
 .daily-clock{display:block;text-align:right;margin:-7px 2px 8px;color:#758173;font:600 11px Manrope,sans-serif;font-variant-numeric:tabular-nums}
+:root[data-theme=dark] .date,:root[data-theme=dark] .hero label,:root[data-theme=dark] .game label,:root[data-theme=dark] article label,:root[data-theme=dark] .results-review-hint,:root[data-theme=dark] .review-puzzle>label{color:#c0c9bd}:root[data-theme=dark] .cardfoot,:root[data-theme=dark] .gentle,:root[data-theme=dark] .back,:root[data-theme=dark] .resulthero p,:root[data-theme=dark] .score small,:root[data-theme=dark] .summary span,:root[data-theme=dark] .resultrow small,:root[data-theme=dark] .review-puzzle>p{color:#b7c1b5}:root[data-theme=dark] .hintbutton{color:#e0d099}:root[data-theme=dark] .progresscopy small{color:#bdc7ba}
