@@ -132,11 +132,36 @@ const alternatingOperations: PuzzleTemplate={id:'alternating-operations',categor
  while(terms.length<count+1){const index=terms.length-1;terms.push(terms.at(-1)!*(index%2===0?factorA:factorB)+(index%2===0?offsetA:offsetB))}
  return make('alternating-operations:'+start+':'+factorA+':'+offsetA+':'+factorB+':'+offsetB,'Alternating operations',terms.slice(0,count),terms[count],'Alternate between two operations','Apply '+factorA+' times the previous term '+(offsetA<0?'minus '+Math.abs(offsetA):'plus '+offsetA)+' then '+factorB+' times the term '+(offsetB<0?'minus '+Math.abs(offsetB):'plus '+offsetB)+', alternating the steps. The next term is '+terms[count]+'.',['Check how each term changes into the next.','Two operations take turns repeating.','Continue alternating the two operations in the same order.'],{type:'alternating-operation',factorA,offsetA,factorB,offsetB});
 }};
-const matrixKinds: VisualShape['kind'][]=['triangle','diamond','pentagon','arrow'];
+const matrixKinds: VisualShape['kind'][]=['triangle','pentagon','arrow','l-block'];
+const shapeNames:Record<VisualShape['kind'],string>={triangle:'triangle',pentagon:'pentagon',arrow:'arrow','l-block':'L-shaped block'};
 type MatrixFamily=NonNullable<NonNullable<Puzzle['visualPattern']>['family']>;
 const pieceKey=(piece:VisualShape)=>[piece.kind,piece.fill,piece.rotation,piece.count??1,piece.slot??''].join(':');
 const tileKey=(tile:VisualTile)=>tile.map(pieceKey).sort().join('|');
 const piece=(kind:VisualShape['kind'],attrs:Partial<VisualShape>={}):VisualShape=>({kind,fill:'solid',rotation:0,...attrs});
+const cornerNames=['top-left','top-right','bottom-left','bottom-right'] as const;
+const pluralShapeNames:Record<VisualShape['kind'],string>={triangle:'triangles',pentagon:'pentagons',arrow:'arrows','l-block':'L-shaped blocks'};
+function describeVisualShape(shape:VisualShape):string{
+ const count=shape.count??1,fill=shape.fill==='outline'?'outline':'solid',noun=count===1?shapeNames[shape.kind]:pluralShapeNames[shape.kind],amount=count===1?'':count===2?'two ':count===3?'three ':String(count)+' ';
+ let description=amount?(amount+fill+' '+noun):((fill==='outline'?'an ':'a ')+fill+' '+noun);
+ if(shape.rotation)description+=' turned '+shape.rotation+' degrees clockwise';
+ if(shape.slot!==undefined)description+=' in the '+cornerNames[shape.slot]+' corner';
+ return description;
+}
+function describeVisualTile(tile:VisualTile):string{
+ return tile.length?tile.map(describeVisualShape).join(' and '):'an empty tile';
+}
+function explainVisualChange(from:VisualShape,to:VisualShape):string{
+ const changes:string[]=[];
+ if(from.kind!==to.kind)changes.push('change '+shapeNames[from.kind]+' to '+shapeNames[to.kind]);
+ if(from.fill!==to.fill)changes.push('switch from '+from.fill+' to '+to.fill);
+ if((from.count??1)!==(to.count??1))changes.push('change the count from '+(from.count??1)+' to '+(to.count??1));
+ if(from.rotation!==to.rotation)changes.push('turn from '+from.rotation+' degrees clockwise to '+to.rotation+' degrees clockwise');
+ if(from.slot!==to.slot&&to.slot!==undefined)changes.push('move from the '+cornerNames[from.slot??0]+' to the '+cornerNames[to.slot]+' corner');
+ return changes.length?changes.join(', then '):'keep its shape, fill, direction, and position';
+}
+function nameVisualTile(tile:VisualTile):string{
+ return tile.length?tile.map(shape=>shapeNames[shape.kind]).join(' and '):'an empty tile';
+}
 function distinctOptions(answer:VisualTile,candidates:VisualTile[],rng:()=>number,total=8){
  const distinct:VisualTile[]=[];for(const option of [answer,...candidates])if(!distinct.some(item=>tileKey(item)===tileKey(option)))distinct.push(option);
  if(distinct.length<total)throw new Error('Visual puzzle could not create enough distinct choices.');
@@ -149,7 +174,7 @@ function distinctOptions(answer:VisualTile,candidates:VisualTile[],rng:()=>numbe
 function makeVisualMatrix(rng:()=>number){
  const families:MatrixFamily[]=['attribute-cycle','row-distribution','reflection','count-progression','shape-xor','shape-union','orbit-movement','analogy-transform'];
  const family=families[int(rng,0,families.length-1)],matrixKinds3=matrixKinds.slice(0,3),fillStart=int(rng,0,1),fillByRow=rng()<.5,rotationByColumn=rng()<.5;
- let rows:2|3=3,columns:2|3=3,missingIndex=6+int(rng,0,2),cells:(VisualTile|null)[]=[],answer:VisualTile=[],ruleText='',rules:string[]=[],taskFormat:NonNullable<NonNullable<Puzzle['visualPattern']>['taskFormat']>='complete-matrix',candidates:VisualTile[]=[];
+ let rows:2|3=3,columns:2|3=3,missingIndex=6+int(rng,0,2),cells:(VisualTile|null)[]=[],answer:VisualTile=[],ruleText='',explanationRule='',rules:string[]=[],taskFormat:NonNullable<NonNullable<Puzzle['visualPattern']>['taskFormat']>='complete-matrix',candidates:VisualTile[]=[];
  const fillRule=fillByRow?'Fill alternates between rows.':'Fill alternates across columns.';
  const rotationRule=rotationByColumn?'Each step to the right turns a shape 90° clockwise.':'Each step down turns a shape 90° clockwise.';
  if(family==='shape-xor'||family==='shape-union'){
@@ -158,6 +183,7 @@ function makeVisualMatrix(rng:()=>number){
   cells=[];
   for(let row=0;row<3;row++){const a=[base[row],base[(row+1)%3]],b=[base[(row+1)%3],base[(row+2)%3]],result=combine(a,b);cells.push(a,b,row===2?null:result);if(row===2)answer=result}
   missingIndex=8;rules.push(family,'set-operation');ruleText=operator==='XOR'?'In each row, the third tile keeps shapes that appear in exactly one of the first two tiles. A shared shape cancels out.':'In each row, combine the shapes from the first two tiles and keep each shape only once.';
+  explanationRule=operator==='XOR'?'Across each row, the first two tiles combine to make the third. Remove any shape that appears in both; keep only shapes found in one tile. This rule repeats independently in every row.':'Across each row, the first two tiles combine to make the third. Keep one copy of every different shape, even if both tiles contain it. This rule repeats independently in every row.';
   const allSubsets=(mask:number):VisualTile=>base.filter((_,index)=>(mask&(1<<index))!==0);
   candidates=Array.from({length:8},(_,i)=>allSubsets(i));
  }else if(family==='analogy-transform'){
@@ -168,6 +194,7 @@ function makeVisualMatrix(rng:()=>number){
   const variants:VisualTile[]=[[{...d,kind:matrixKinds[(matrixKinds.indexOf(d.kind)+1)%4]}],[{...d,kind:matrixKinds[(matrixKinds.indexOf(d.kind)+3)%4]}],[{...d,fill:d.fill==='solid'?'outline':'solid'}],[{...d,rotation:((d.rotation+90)%360) as VisualShape['rotation']}],[{...d,rotation:((d.rotation+180)%360) as VisualShape['rotation']}],[{...d,rotation:((d.rotation+270)%360) as VisualShape['rotation']}],[{...d,count:((d.count??1)%3+1) as 1|2|3}],[{...d,count:((d.count??1)%3+2) as 1|2|3}]];
   candidates=variants;rules.push(['quarter-turn','fill-flip','shape-progression','count-progression'][transform]);
   ruleText=transform===0?'The top pair shows a 90° clockwise turn. Apply the same turn to the bottom-left figure.':transform===1?'The top pair changes from solid to outline (or outline to solid). Apply that fill change to the bottom-left figure.':transform===2?'The top pair advances one shape in the cycle. Apply that same one-step shape change to the bottom-left figure.':'The top pair adds one shape, wrapping from three back to one. Apply that count change to the bottom-left figure.';
+  explanationRule=transform===0?'Across the top row, the same figure turns 90 degrees clockwise; its shape and fill stay the same.':transform===1?'Across the top row, the shape and direction stay the same while the fill changes from '+a.fill+' to '+b.fill+'.':transform===2?'Across the top row, the shape changes from '+shapeNames[a.kind]+' to '+shapeNames[b.kind]+' in the cycle '+matrixKinds.map(kind=>shapeNames[kind]).join(' → ')+'. Fill and direction stay the same.':'Across the top row, the count increases from one to two. The shape, fill, and direction stay the same.';
  }else{
   const shapeStart=int(rng,0,3),shapeStep=int(rng,1,3),offset=int(rng,0,2),rotationStart=int(rng,0,3)*90;
   const cell=(row:number,column:number):VisualShape=>{
@@ -184,20 +211,49 @@ function makeVisualMatrix(rng:()=>number){
    return piece(kind,{count,slot,fill,rotation});
   };
   cells=Array.from({length:9},(_,index)=>index===missingIndex?null:[cell(Math.floor(index/3),index%3)]);answer=[cell(Math.floor(missingIndex/3),missingIndex%3)];
-  if(family==='row-distribution'){rules.push('distribute-three');ruleText='Each row and column contains one triangle, one diamond, and one pentagon, in a shifted order.'}
-  else if(family==='reflection'){rules.push('reflection','row-progression');ruleText='Each row mirrors its outer shapes around the center column, while the shape pattern shifts as you move down.'}
-  else if(family==='count-progression'){rules.push('count-progression');ruleText='The number of shapes increases by one moving right, then wraps from three back to one. The starting count shifts on each new row.'}
-  else if(family==='orbit-movement'){rules.push('position-orbit');ruleText='The same shape moves through the four corners of each tile in a repeating clockwise cycle as you move through the grid.'}
-  else {rules.push('shape-progression');const places=shapeStep===1?'one place':shapeStep===2?'two places':'three places';ruleText='Each move right or down advances '+places+' in the shape cycle ('+matrixKinds.join(' → ')+'), wrapping back to the start.'}
-  if(family!=='count-progression'&&family!=='orbit-movement'){ruleText+=' '+fillRule+' '+rotationRule;rules.push('fill-'+(fillByRow?'row':'column'),'rotation-'+(rotationByColumn?'column':'row'))}
+  if(family==='row-distribution'){rules.push('distribute-three');ruleText='Each row and column contains one '+matrixKinds3.map(kind=>shapeNames[kind]).join(', one ')+', in a shifted order.';explanationRule='Each row and column contains one '+matrixKinds3.map(kind=>shapeNames[kind]).join(', one ')+'. The order shifts right and down.'}
+  else if(family==='reflection'){rules.push('reflection','row-progression');const places=shapeStep===1?'one':shapeStep===2?'two':'three';ruleText='Each row mirrors its outer shapes around the center column, while the shape pattern shifts '+places+' place'+(places==='one'?'':'s')+' as you move down.';explanationRule='Each row mirrors outside shapes; its middle is one cycle step later. Down columns, shapes advance '+places+' place'+(places==='one'?'':'s')+'.'}
+  else if(family==='count-progression'){rules.push('count-progression');ruleText='The number of shapes increases by one moving right, then wraps from three back to one. The starting count shifts on each new row.';explanationRule='The same shape repeats. Count rises by one right and down, wraps from three to one, and each row starts one count later.'}
+  else if(family==='orbit-movement'){rules.push('position-orbit');ruleText='The same shape moves through the four corners of each tile in a repeating clockwise cycle as you move through the grid.';explanationRule='The same shape moves clockwise through top left, top right, bottom right, and bottom left, then repeats.'}
+  else {rules.push('shape-progression');const places=shapeStep===1?'one':shapeStep===2?'two':'three',cycle=matrixKinds.map(kind=>shapeNames[kind]).join(' → ');ruleText='Each move right or down advances '+places+' place(s) in the shape cycle ('+cycle+'), wrapping back to the start.';explanationRule='Moving right or down, the shape advances '+places+' place'+(places==='one'?'':'s')+' through '+cycle+', then repeats.'}
+  if(family!=='count-progression'&&family!=='orbit-movement'){
+   ruleText+=' '+fillRule+' '+rotationRule;
+   explanationRule+=' Fill alternates by '+(fillByRow?'row':'column')+'. Moving '+(rotationByColumn?'right':'down')+' turns shapes 90 degrees clockwise.';
+   rules.push('fill-'+(fillByRow?'row':'column'),'rotation-'+(rotationByColumn?'column':'row'));
+  }
   const correct=answer[0];candidates=[[{...correct,kind:matrixKinds[(matrixKinds.indexOf(correct.kind)+1)%4]}],[{...correct,kind:matrixKinds[(matrixKinds.indexOf(correct.kind)+3)%4]}],[{...correct,fill:correct.fill==='solid'?'outline':'solid'}],[{...correct,rotation:((correct.rotation+90)%360) as VisualShape['rotation']}],[{...correct,rotation:((correct.rotation+270)%360) as VisualShape['rotation']}],[{...correct,count:((correct.count??1)%3+1) as 1|2|3}],[{...correct,slot:((correct.slot??0)+1)%4 as 0|1|2|3}]];
  }
  const options=distinctOptions(answer,candidates,rng,8),choices=options.choices,answerIndex=options.answerIndex;
- const position='row '+(Math.floor(missingIndex/columns)+1)+', column '+(missingIndex%columns+1),letter=String.fromCharCode(65+answerIndex),slotNames=['top-left','top-right','bottom-left','bottom-right'],answerDescription=answer.map(item=>(item.count??1)+' '+item.fill+' '+item.kind+(item.slot===undefined?'':' in the '+slotNames[item.slot])).join(' and ');
- const explanation=family==='analogy-transform'?'Option '+letter+' completes the analogy. '+ruleText+' The answer is '+answerDescription+'.':'Option '+letter+' completes '+position+' with '+answerDescription+'. '+ruleText;
+ const columnIndex=missingIndex%columns,letter=String.fromCharCode(65+answerIndex),answerDescription=describeVisualTile(answer);
+ let application:string;
+ if(family==='analogy-transform'){
+  const bottomLeft=(cells[2] as VisualTile)[0];
+  const changeDescription=rules[0]==='quarter-turn'?'Apply the same turn':rules[0]==='fill-flip'?'Apply the same fill change':rules[0]==='shape-progression'?'Apply the same shape change':'Apply the same count change';
+  application=changeDescription+' across the bottom row, starting with '+describeVisualShape(bottomLeft)+'. This means '+explainVisualChange(bottomLeft,answer[0])+', giving '+answerDescription+'. Choose Option '+letter+'.';
+ }else if(family==='shape-union'||family==='shape-xor'){
+  const bottomLeft=cells[6] as VisualTile,bottomMiddle=cells[7] as VisualTile,shared=bottomLeft.filter(shape=>bottomMiddle.some(other=>other.kind===shape.kind)).map(shape=>shapeNames[shape.kind]);
+  application='In the bottom row, '+nameVisualTile(bottomLeft)+' combines with '+nameVisualTile(bottomMiddle)+'. They share '+shared.join(' and ')+'; '+(family==='shape-xor'?'remove it and keep the other shapes':'keep it once with the other shapes')+' to make '+answerDescription+'. Choose Option '+letter+'.';
+ }else if(family==='row-distribution'){
+  const previousIndex=columnIndex>0?missingIndex-1:missingIndex-columns,previous=(cells[previousIndex] as VisualTile)[0];
+  application='Row 3 and column '+(columnIndex+1)+' need a '+shapeNames[answer[0].kind]+'. Starting with '+describeVisualShape(previous)+', '+explainVisualChange(previous,answer[0])+', giving '+answerDescription+'. Choose Option '+letter+'.';
+ }else if(family==='count-progression'){
+  const previousIndex=columnIndex>0?missingIndex-1:missingIndex-columns,previous=(cells[previousIndex] as VisualTile)[0];
+  application='In the top row, the count rises from '+((cells[0] as VisualTile)[0].count)+' to '+((cells[1] as VisualTile)[0].count)+'. From '+describeVisualShape(previous)+' beside the blank, add one, wrapping from three to one; this gives '+answerDescription+'. Choose Option '+letter+'.';
+ }else if(family==='orbit-movement'){
+  const previousIndex=columnIndex>0?missingIndex-1:missingIndex-columns,previous=(cells[previousIndex] as VisualTile)[0];
+  application='Across the top row, it moves one corner clockwise; the same happens down the first column. From '+describeVisualShape(previous)+' beside the blank, move it to the '+cornerNames[answer[0].slot??0]+' corner. The result is '+answerDescription+'. Choose Option '+letter+'.';
+ }else if(family==='reflection'){
+  const outerShapes=columnIndex===1?nameVisualTile(cells[6] as VisualTile):nameVisualTile(cells[8-columnIndex] as VisualTile);
+  const previousIndex=columnIndex>0?missingIndex-1:missingIndex-columns,previous=(cells[previousIndex] as VisualTile)[0];
+  application=(columnIndex===1?'In row 3, the middle follows the outside shapes.':'In row 3, the missing outside shape mirrors '+outerShapes+'.')+' From '+describeVisualShape(previous)+', '+explainVisualChange(previous,answer[0])+', giving '+answerDescription+'. Choose Option '+letter+'.';
+ }else{
+  const previousIndex=columnIndex>0?missingIndex-1:missingIndex-columns,previous=(cells[previousIndex] as VisualTile)[0];
+  application='Top row: '+shapeNames[(cells[0] as VisualTile)[0].kind]+' → '+shapeNames[(cells[1] as VisualTile)[0].kind]+'. From '+describeVisualShape(previous)+', '+explainVisualChange(previous,answer[0])+', giving '+answerDescription+'. Choose Option '+letter+'.';
+ }
+ const explanation=explanationRule+' '+application;
  const kindAnswer=answerIndex;
  const puzzleRule=family==='analogy-transform'?'Complete the visual analogy':'Complete the shape pattern';
- if(cells.filter(value=>value===null).length!==1||cells[missingIndex]!==null||choices.length!==8||new Set(choices.map(tileKey)).size!==8||tileKey(choices[kindAnswer])!==tileKey(answer)||!explanation.includes(ruleText))throw new Error('Generated visual puzzle failed rule, answer, or choice validation.');
+ if(cells.filter(value=>value===null).length!==1||cells[missingIndex]!==null||choices.length!==8||new Set(choices.map(tileKey)).size!==8||tileKey(choices[kindAnswer])!==tileKey(answer)||!explanation.includes(explanationRule)||!explanation.includes('Option '+letter)||!explanation.includes(answerDescription))throw new Error('Generated visual puzzle failed rule, answer, or choice validation.');
  return {cells,choices,answerIndex,missingIndex,rows,columns,family,ruleTypes:rules,taskFormat,explanation,ruleText,answer,puzzleRule};
 }
 const shapePattern: PuzzleTemplate={id:'visual-matrix',category:'Visual reasoning',generate:rng=>{

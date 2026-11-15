@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import type { Puzzle, VisualShape } from './types';
 import { missingTermIndices } from './engine/missingTerms';
 
+const shapeNames:Record<VisualShape['kind'],string>={triangle:'triangle',pentagon:'pentagon',arrow:'arrow','l-block':'L-shaped block'};
+
 function ShapeIcon({ shape }: { shape: VisualShape }) {
   const points: Record<VisualShape['kind'], string> = {
     triangle: '32,6 58,54 6,54',
-    diamond: '32,4 55,25 39,58 8,39',
     pentagon: '32,4 60,24 49,58 15,58 4,24',
     arrow: '32,3 59,29 43,29 43,61 21,61 21,29 5,29',
+    'l-block': '8,8 30,8 30,36 56,36 56,58 8,58',
   };
   const count=shape.count??1,positions:[number,number,number][]=count===1?[[0,0,1]]:count===2?[[-11,-5,.7],[11,5,.7]]:[[-14,-8,.58],[14,-8,.58],[0,15,.58]];
   return <svg className="visual-shape" viewBox="0 0 64 64" aria-hidden="true">
@@ -24,7 +26,7 @@ function TileImage({ tile }: { tile: VisualShape[] }) {
 function describeTile(tile: VisualShape[]): string {
   if(tile.length===0)return 'empty tile';
   const positions=['top-left','top-right','bottom-left','bottom-right'];
-  return tile.map((shape)=>[shape.count&&shape.count>1?shape.count+' copies of':undefined,shape.fill,shape.kind,shape.rotation?shape.rotation+' degrees clockwise':undefined,shape.slot===undefined?undefined:'in the '+positions[shape.slot]].filter(Boolean).join(' ')).join(' and ');
+  return tile.map((shape)=>[shape.count&&shape.count>1?shape.count+' copies of':undefined,shape.fill,shapeNames[shape.kind],shape.rotation?shape.rotation+' degrees clockwise':undefined,shape.slot===undefined?undefined:'in the '+positions[shape.slot]].filter(Boolean).join(' ')).join(' and ');
 }
 
 export default function SequenceDisplay({

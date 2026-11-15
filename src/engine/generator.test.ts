@@ -28,6 +28,7 @@ describe('practice puzzle generator',()=>{
  it('uses distinct visual reasoning families with eight validated options',()=>{
   const visual=templates.find((template)=>template.id==='visual-matrix')!;
   const families=new Set<string>();
+  const spokenShapes:Record<string,string>={triangle:'triangle',pentagon:'pentagon',arrow:'arrow','l-block':'l-shaped block'};
   for(let seed=1;seed<=512;seed++){
    const puzzle=visual.generate(rngFrom(seed*104729)),matrix=puzzle.visualPattern!;
    families.add(matrix.family!);
@@ -37,7 +38,21 @@ describe('practice puzzle generator',()=>{
    expect(matrix.choices).toHaveLength(8);
    expect(new Set(matrix.choices.map((choice)=>JSON.stringify(choice))).size).toBe(8);
    expect(matrix.choices[matrix.answerIndex]).toBeDefined();
-   expect(puzzle.explanation).toContain('Option '+String.fromCharCode(65+matrix.answerIndex));
+   const explanation=puzzle.explanation.toLowerCase(),letter=String.fromCharCode(65+matrix.answerIndex).toLowerCase();
+   expect(explanation).toContain('option '+letter);
+   const wordCount=puzzle.explanation.trim().split(/\s+/).length;
+   expect(wordCount,puzzle.id+': '+puzzle.explanation).toBeGreaterThanOrEqual(40);
+   expect(wordCount,puzzle.id+': '+puzzle.explanation).toBeLessThanOrEqual(80);
+   for(const shape of matrix.choices[matrix.answerIndex]){
+    expect(explanation).toContain(spokenShapes[shape.kind]);
+    expect(explanation).toContain(shape.fill);
+    if(shape.count===2)expect(explanation).toContain('two ');
+    if(shape.count===3)expect(explanation).toContain('three ');
+    if(shape.rotation)expect(explanation).toContain(shape.rotation+' degrees clockwise');
+    if(shape.slot!==undefined)expect(explanation).toContain(['top-left','top-right','bottom-left','bottom-right'][shape.slot]);
+   }
+   const familyTerms:Record<string,string>={'attribute-cycle':'shape advances','row-distribution':'row 3 and column',reflection:'mirror','count-progression':'count rises by one','shape-xor':'remove it and keep the other shapes','shape-union':'keep it once','orbit-movement':'one corner clockwise','analogy-transform':'bottom row'};
+   expect(explanation).toContain(familyTerms[matrix.family!]);
   }
   expect(families.size).toBe(8);
  });

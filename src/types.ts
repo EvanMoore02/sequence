@@ -1,4 +1,4 @@
-export type VisualShape={kind:'triangle'|'diamond'|'pentagon'|'arrow';fill:'solid'|'outline';rotation:0|90|180|270;count?:1|2|3;slot?:0|1|2|3};
+export type VisualShape={kind:'triangle'|'pentagon'|'arrow'|'l-block';fill:'solid'|'outline';rotation:0|90|180|270;count?:1|2|3;slot?:0|1|2|3};
 export type VisualTile=VisualShape[];
 export type VisualMatrix={cells:(VisualTile|null)[];choices:VisualTile[];answerIndex:number;missingIndex?:number;rows?:2|3;columns?:2|3;family?:'attribute-cycle'|'row-distribution'|'reflection'|'count-progression'|'shape-xor'|'shape-union'|'orbit-movement'|'analogy-transform';ruleTypes?:string[];taskFormat?:'complete-matrix'|'analogy'|'find-odd-tile'};
 export type Puzzle={id:string;category:string;difficulty:'Easy'|'Medium'|'Hard'|'Expert';sequence:number[];displaySequence?:number[];answer:number;rule:string;explanation:string;hints:[string,string,string];answerIndex?:number;oddTermIndex?:number;taskFormat?:'next-term'|'missing-middle'|'find-odd-term';shapePattern?:{sequence:string[];answer:string;choices:string[]};visualPattern?:VisualMatrix};
