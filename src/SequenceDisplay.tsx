@@ -55,7 +55,7 @@ export default function SequenceDisplay({
           const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
           setter?.call(input, String(index));
           input.dispatchEvent(new Event('input', { bubbles: true }));
-        }}><span>{String.fromCharCode(65 + index)}</span><TileImage tile={tile} /></button>)}
+        }}><span className="visual-option-label">{String.fromCharCode(65 + index)}</span><span className="visual-option-frame"><TileImage tile={tile} /></span></button>)}
       </div>
     </div>;
   }

@@ -48,3 +48,7 @@
 
 .daily-clock{display:block;text-align:right;margin:-7px 2px 8px;color:#758173;font:600 11px Manrope,sans-serif;font-variant-numeric:tabular-nums}
 :root[data-theme=dark] .date,:root[data-theme=dark] .hero label,:root[data-theme=dark] .game label,:root[data-theme=dark] article label,:root[data-theme=dark] .results-review-hint,:root[data-theme=dark] .review-puzzle>label{color:#c0c9bd}:root[data-theme=dark] .cardfoot,:root[data-theme=dark] .gentle,:root[data-theme=dark] .back,:root[data-theme=dark] .resulthero p,:root[data-theme=dark] .score small,:root[data-theme=dark] .summary span,:root[data-theme=dark] .resultrow small,:root[data-theme=dark] .review-puzzle>p{color:#b7c1b5}:root[data-theme=dark] .hintbutton{color:#e0d099}:root[data-theme=dark] .progresscopy small{color:#bdc7ba}
+
+.answer-feedback{display:flex;flex-direction:column;gap:3px;margin:12px 0;padding:11px 13px;border-radius:8px;font-size:12px;line-height:1.45}.answer-feedback.correct{background:#edf5eb;color:#426e49}.answer-feedback.incorrect{background:#fff0ee;border:1px solid #f0d0cc;color:#8f342f}.answer-feedback.incorrect strong{font-size:13px}:root[data-theme=dark] .answer-feedback.correct{background:#26392a;color:#c4e0c0}:root[data-theme=dark] .answer-feedback.incorrect{background:#402927;border-color:#70423e;color:#ffd4cf}
+
+.notice.incorrect{background:#fff0ee;border:1px solid #f0d0cc;color:#8f342f;font-weight:600}:root[data-theme=dark] .notice.incorrect{background:#402927;border-color:#70423e;color:#ffd4cf}
