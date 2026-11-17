@@ -32,6 +32,14 @@ const patternComplexity: Record<AnswerPattern['type'], number> = {
   'reverse-add': 5,
   collatz: 5,
   'prime-gaps': 5,
+  'modular-cycle': 3,
+  'digit-sum': 4,
+  tribonacci: 3,
+  'digit-product': 4,
+  'reverse-digits': 3,
+  lucas: 3,
+  pell: 4,
+  polygonal: 4,
   // Shape sequences are rendered as visual choices and reserve an Expert slot
   // in every Daily lineup; keep their rating above the Expert threshold.
   'shape-cycle': 5,

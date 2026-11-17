@@ -107,6 +107,50 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
       while (terms.length < count) { terms.push(terms.at(-1)! + gap); gap += pattern.growth; }
       return terms;
     }
+    case 'modular-cycle':
+      return Array.from({ length: count }, (_, index) => (sequence[0] + index * pattern.step) % pattern.modulus);
+    case 'digit-sum': {
+      const terms = [sequence[0]];
+      while (terms.length < count) {
+        const previous = terms.at(-1)!;
+        terms.push(previous + String(previous).split('').reduce((sum, digit) => sum + Number(digit), 0));
+      }
+      return terms;
+    }
+    case 'tribonacci': {
+      const terms = sequence.slice(0, 3);
+      while (terms.length < count) terms.push(terms.at(-1)! + terms.at(-2)! + terms.at(-3)!);
+      return terms;
+    }
+    case 'digit-product': {
+      const terms = [sequence[0]];
+      while (terms.length < count) {
+        const previous = terms.at(-1)!;
+        const product = String(previous).split('').reduce((value, digit) => value * Number(digit), 1);
+        terms.push(previous + product);
+      }
+      return terms;
+    }
+    case 'reverse-digits': {
+      const terms = [sequence[0]];
+      while (terms.length < count) terms.push(Number(String(terms.at(-1)!).split('').reverse().join('')));
+      return terms;
+    }
+    case 'lucas': {
+      const terms = [2, 1];
+      while (terms.length < count) terms.push(terms.at(-1)! + terms.at(-2)!);
+      return terms;
+    }
+    case 'pell': {
+      const terms = [0, 1];
+      while (terms.length < count) terms.push(2 * terms.at(-1)! + terms.at(-2)!);
+      return terms;
+    }
+    case 'polygonal':
+      return Array.from({ length: count }, (_, index) => {
+        const n = pattern.start + index;
+        return ((pattern.sides - 2) * n * n - (pattern.sides - 4) * n) / 2;
+      });
     case 'shape-cycle':
       return Array.from({ length: count }, (_, index) => (sequence[0] + index * pattern.step) % 8);
     case 'visual-matrix':
