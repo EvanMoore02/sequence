@@ -323,12 +323,28 @@ const shapePattern: PuzzleTemplate={id:'visual-matrix',category:'Visual reasonin
 export const templates:PuzzleTemplate[]=[arithmetic,missingMiddle,oddTerm,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,polygonal,lookAndSay,weightedRecurrence,reverseAdd,digitSum,digitProduct,reverseDigitsPuzzle,collatz,primeGaps,modularCycle,tribonacci,lucas,pell,alternatingSteps,alternatingOperations,shapePattern];
 // Alternating operations are less frequent than other templates in random play.
 const randomPlayTemplates=templates.flatMap(template=>template.id==='alternating-operations'?[template]:[template,template]);
-export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
+const categoryCache=new Map<PracticeDifficulty,string[]>();
+export function getPracticeCategories(difficulty:PracticeDifficulty):string[]{
+ const cached=categoryCache.get(difficulty);if(cached)return cached;
+ const available=new Set<string>();
+ for(let templateIndex=0;templateIndex<templates.length;templateIndex++){
+  const template=templates[templateIndex];
+  for(let sample=0;sample<32;sample++){
+   let seed=(templateIndex+1)*104729+sample*7919;const rng=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
+   const puzzle=template.generate(rng);
+   if(difficulty==='All'?puzzle.difficulty!=='Easy':puzzle.difficulty===ratingForPlayerDifficulty[difficulty]){available.add(template.category);break}
+  }
+ }
+ const result=[...available].sort((a,b)=>a.localeCompare(b));categoryCache.set(difficulty,result);return result;
+}
+export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random,category?:string){
  const recent=new Set(recentIds.slice(-30));
  const recentTemplates=new Set(recentIds.slice(-4).map(id=>id.split(':',1)[0]));
  let fallback:GeneratedPuzzle|undefined;
  for(let attempt=0;attempt<1000;attempt++){
-  const template=randomPlayTemplates[int(rng,0,randomPlayTemplates.length-1)],puzzle=template.generate(rng);
+  const candidates=category?randomPlayTemplates.filter(template=>template.category===category):randomPlayTemplates;
+  if(!candidates.length)throw new Error('No puzzle templates are available for '+category+'.');
+  const template=candidates[int(rng,0,candidates.length-1)],puzzle=template.generate(rng);
   if(!puzzle.sequence.every(safe)||!safe(puzzle.answer))continue;
   if(difficulty==='All'&&puzzle.difficulty==='Easy')continue;
   if(difficulty!=='All'&&puzzle.difficulty!==ratingForPlayerDifficulty[difficulty])continue;
