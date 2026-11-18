@@ -72,7 +72,8 @@ function makePools(): Pools {
 
   authoredPuzzles.forEach(add);
   for (const template of templates) {
-    for (let attempt = 0; attempt < samplesPerTemplate; attempt += 1) {
+    const sampleCount = template.id === 'alternating-operations' ? samplesPerTemplate / 4 : samplesPerTemplate;
+    for (let attempt = 0; attempt < sampleCount; attempt += 1) {
       add(template.generate(randomFromSeed(hash(template.id + ':' + attempt))));
     }
   }

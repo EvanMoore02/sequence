@@ -321,12 +321,14 @@ const shapePattern: PuzzleTemplate={id:'visual-matrix',category:'Visual reasonin
  return {...p,visualPattern:{cells:visual.cells,choices:visual.choices,answerIndex,missingIndex:visual.missingIndex,rows:visual.rows,columns:visual.columns,family:visual.family,ruleTypes:visual.ruleTypes,taskFormat:visual.taskFormat}};
 }};
 export const templates:PuzzleTemplate[]=[arithmetic,missingMiddle,oddTerm,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,polygonal,lookAndSay,weightedRecurrence,reverseAdd,digitSum,digitProduct,reverseDigitsPuzzle,collatz,primeGaps,modularCycle,tribonacci,lucas,pell,alternatingSteps,alternatingOperations,shapePattern];
+// Alternating operations are less frequent than other templates in random play.
+const randomPlayTemplates=templates.flatMap(template=>template.id==='alternating-operations'?[template]:[template,template]);
 export function generatePuzzle(difficulty:PracticeDifficulty,recentIds:string[]=[],rng:()=>number=Math.random){
  const recent=new Set(recentIds.slice(-30));
  const recentTemplates=new Set(recentIds.slice(-4).map(id=>id.split(':',1)[0]));
  let fallback:GeneratedPuzzle|undefined;
  for(let attempt=0;attempt<1000;attempt++){
-  const template=templates[int(rng,0,templates.length-1)],puzzle=template.generate(rng);
+  const template=randomPlayTemplates[int(rng,0,randomPlayTemplates.length-1)],puzzle=template.generate(rng);
   if(!puzzle.sequence.every(safe)||!safe(puzzle.answer))continue;
   if(difficulty==='All'&&puzzle.difficulty==='Easy')continue;
   if(difficulty!=='All'&&puzzle.difficulty!==ratingForPlayerDifficulty[difficulty])continue;
