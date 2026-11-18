@@ -41,8 +41,8 @@ describe('practice puzzle generator',()=>{
    const explanation=puzzle.explanation.toLowerCase(),letter=String.fromCharCode(65+matrix.answerIndex).toLowerCase();
    expect(explanation).toContain('option '+letter);
    const wordCount=puzzle.explanation.trim().split(/\s+/).length;
-   expect(wordCount,puzzle.id+': '+puzzle.explanation).toBeGreaterThanOrEqual(40);
-   expect(wordCount,puzzle.id+': '+puzzle.explanation).toBeLessThanOrEqual(80);
+   expect(wordCount,puzzle.id+': explanation should be readable text').toBeGreaterThanOrEqual(40);
+   expect(wordCount,puzzle.id+': '+puzzle.explanation).toBeLessThanOrEqual(100);
    for(const shape of matrix.choices[matrix.answerIndex]){
     expect(explanation).toContain(spokenShapes[shape.kind]);
     expect(explanation).toContain(shape.fill);

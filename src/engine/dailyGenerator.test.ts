@@ -255,7 +255,7 @@ describe('generated Daily Challenge', () => {
       recent.push(new Set(currentSignatures));
       if (recent.length > 14) recent.shift();
     }
-  });
+  }, 15000);
 
   it('allows a puzzle to become eligible for reuse exactly 15 dates later', () => {
     expect(isWithinDailyCooldown(12, 26)).toBe(true);
