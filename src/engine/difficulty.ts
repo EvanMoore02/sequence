@@ -16,6 +16,8 @@ export function playerDifficultyForRating(rating: DifficultyRating): PlayerDiffi
 
 const patternComplexity: Record<AnswerPattern['type'], number> = {
   arithmetic: 0,
+  interleaved: 4,
+  'decreasing-difference': 3,
   geometric: 1,
   power: 1,
   fibonacci: 2,

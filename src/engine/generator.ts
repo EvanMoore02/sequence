@@ -14,6 +14,8 @@ const collatzNext=(n:number)=>n%2===0?n/2:3*n+1;
 const sayNumber=(n:number)=>{const text=String(n);let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}return Number(result)};
 function patternEquation(pattern:AnswerPattern):string{
  switch(pattern.type){
+  case 'interleaved':return 'Odd-position terms add '+pattern.firstStep+' each time; even-position terms add '+pattern.secondStep+'.';
+  case 'decreasing-difference':return 'Each gap decreases by '+pattern.growth+'; continue with the next smaller gap.';
   case 'arithmetic':return 'For consecutive terms, next = current '+(pattern.step<0?'- '+Math.abs(pattern.step):'+ '+pattern.step)+'.';
   case 'geometric':return 'For consecutive terms, next = current × '+pattern.factor+'.';
   case 'power':return 'Term k = k^'+pattern.exponent+' for consecutive values of k.';
@@ -76,7 +78,7 @@ const fibonacci: PuzzleTemplate={id:'fibonacci',category:'Recursive',generate:rn
  return make('fibonacci:'+a+':'+b,'Recursive',seq,answer,'Add the previous two','Each term is the sum of the previous two terms: '+seq[3]+' + '+seq[4]+' = '+answer+'.',[ 'Look back more than one position.','For each term after the first two, test whether the previous pair adds to it.','Add '+seq[3]+' and '+seq[4]+'.'],{type:'fibonacci'});
 }};
 const differences: PuzzleTemplate={id:'differences',category:'Differences',generate:rng=>{
- const start=int(rng,-10,20),first=int(rng,-4,8),growth=int(rng,1,4),seq=[start];for(let i=0;i<4;i++)seq.push(seq.at(-1)!+first+i*growth);const answer=seq[4]+first+4*growth;
+ const start=int(rng,-10,20),first=int(rng,1,8),growth=int(rng,1,4),seq=[start];for(let i=0;i<4;i++)seq.push(seq.at(-1)!+first+i*growth);const answer=seq[4]+first+4*growth;
  return make('differences:'+start+':'+first+':'+growth,'Differences',seq,answer,'Differences increase by '+growth,'The first differences increase by '+growth+' each time; the next gap is '+(first+4*growth)+', giving '+answer+'.',[ 'Compare the gaps between consecutive terms.','Write down the gaps, then compare how much each gap changes.','The next gap is '+(first+4*growth)+'.'],{type:'increasing-difference',firstDifference:first,growth});
 }};
 const doubling: PuzzleTemplate={id:'doubling-gaps',category:'Differences',generate:rng=>{
@@ -159,12 +161,8 @@ const digitProduct: PuzzleTemplate={id:'digit-product',category:'Digit operation
  const start=int(rng,23,39),count=5,productDigits=(n:number)=>String(n).split('').reduce((product,digit)=>product*Number(digit),1),terms=[start];while(terms.length<count+1)terms.push(terms.at(-1)!+productDigits(terms.at(-1)!));
  return make('digit-product:'+start,'Digit operations',terms.slice(0,count),terms[count],'Add the product of the digits','The digits of '+terms[count-1]+' multiply to '+productDigits(terms[count-1])+', so the next term is '+terms[count]+'.',['Look at the digits within each term.','Multiply the digits of a term and compare that product with the next increase.','Add '+productDigits(terms[count-1])+' to '+terms[count-1]+'.'],{type:'digit-product'});
 }};
-const reverseDigitsPuzzle: PuzzleTemplate={id:'reverse-digits',category:'Digit operations',generate:rng=>{
- const start=int(rng,12,89),count=5,reverse=(n:number)=>Number(String(n).split('').reverse().join('')),terms=[start];while(terms.length<count+1)terms.push(reverse(terms.at(-1)!));
- return make('reverse-digits:'+start,'Digit operations',terms.slice(0,count),terms[count],'Reverse the digits','The digits switch order at each step: '+terms[count-1]+' becomes '+terms[count]+'.',['Watch the order of the digits.','Compare each term with its digits written in reverse order.','Reverse the digits of '+terms[count-1]+'.'],{type:'reverse-digits'});
-}};
 const alternatingSteps: PuzzleTemplate={id:'alternating-steps',category:'Alternating steps',generate:rng=>{
- const start=int(rng,-15,20),oddStep=int(rng,2,9),evenStep=int(rng,-7,6),count=5,terms=[start];
+ const start=int(rng,-15,20),oddStep=int(rng,2,9),drawnEvenStep=int(rng,1,8),evenStep=drawnEvenStep===oddStep?(oddStep===8?7:oddStep+1):drawnEvenStep,count=5,terms=[start];
  while(terms.length<count+1){const index=terms.length-1;terms.push(terms.at(-1)!+(index%2===0?oddStep:evenStep))}
  return make('alternating-steps:'+start+':'+oddStep+':'+evenStep,'Alternating steps',terms.slice(0,count),terms[count],'Alternate between two step sizes','The differences alternate between '+oddStep+' and '+evenStep+'. The next step is '+oddStep+', so the next term is '+terms[count]+'.',['Compare the gaps between neighboring terms.','Write down the gaps and check whether they alternate between two values.','Continue alternating the two step sizes.'],{type:'alternating',oddStep,evenStep});
 }};
@@ -315,12 +313,23 @@ function makeVisualMatrix(rng:()=>number){
  if(cells.filter(value=>value===null).length!==1||cells[missingIndex]!==null||choices.length!==8||new Set(choices.map(tileKey)).size!==8||tileKey(choices[kindAnswer])!==tileKey(answer)||!explanation.startsWith('Correct answer: Option '+letter+'.')||!explanation.includes('Option '+letter)||!explanation.includes(answerDescription))throw new Error('Generated visual puzzle failed rule, answer, or choice validation.');
  return {cells,choices,answerIndex,missingIndex,rows,columns,family,ruleTypes:rules,taskFormat,explanation,ruleText,answer,puzzleRule};
 }
+const interleaved: PuzzleTemplate={id:'interleaved',category:'Interleaved sequences',generate:rng=>{
+ const firstStart=int(rng,1,12),secondStart=int(rng,8,24),firstStep=int(rng,1,5),secondStep=int(rng,2,7),count=6;
+ const sequence=Array.from({length:count},(_,i)=>i%2===0?firstStart+Math.floor(i/2)*firstStep:secondStart+Math.floor(i/2)*secondStep),answer=firstStart+3*firstStep;
+ return make('interleaved:'+firstStart+':'+secondStart+':'+firstStep+':'+secondStep,'Interleaved sequences',sequence,answer,'Follow two sequences in alternating positions','The odd-position terms are '+sequence.filter((_,i)=>i%2===0).join(', ')+' and rise by '+firstStep+'. The even-position terms rise by '+secondStep+'. The next odd-position term is '+answer+'.',['Compare every other term separately.','Split the sequence into odd and even positions.','The odd-position sequence adds '+firstStep+' each time.'],{type:'interleaved',firstStep,secondStep});
+}};
+const decreasingDifferences: PuzzleTemplate={id:'decreasing-differences',category:'Decreasing differences',generate:rng=>{
+ const start=int(rng,100,150),growth=int(rng,2,4),first=int(rng,16,24),sequence=[start];
+ for(let i=0;i<4;i++)sequence.push(sequence.at(-1)!-(first-i*growth));
+ const nextGap=first-4*growth,answer=sequence.at(-1)!-nextGap;
+ return make('decreasing-differences:'+start+':'+first+':'+growth,'Decreasing differences',sequence,answer,'Subtract gaps that shrink steadily','The amounts subtracted are '+Array.from({length:4},(_,i)=>first-i*growth).join(', ')+'. They shrink by '+growth+', so subtract '+nextGap+' next to get '+answer+'.',['Write down the amounts subtracted.','Compare how the gaps change each time.','The next subtraction is '+nextGap+'.'],{type:'decreasing-difference',firstDifference:first,growth});
+}};
 const shapePattern: PuzzleTemplate={id:'visual-matrix',category:'Visual reasoning',generate:rng=>{
  const visual=makeVisualMatrix(rng),{answerIndex,explanation,ruleText}=visual;
  const p=make('visual-matrix:'+visual.family+':'+visual.missingIndex+':'+visual.cells.map(value=>value?tileKey(value):'?').join(','),'Visual reasoning',[0,1,2,3],answerIndex,visual.puzzleRule,explanation,['Compare tiles in the same row or column. What changes from one tile to the next?','Track one feature at a time: shape, number, fill, direction, or position. Check whether that change repeats.',ruleText],{type:'visual-matrix',shapeStep:1,fillByRow:false,rotationByColumn:false});
  return {...p,visualPattern:{cells:visual.cells,choices:visual.choices,answerIndex,missingIndex:visual.missingIndex,rows:visual.rows,columns:visual.columns,family:visual.family,ruleTypes:visual.ruleTypes,taskFormat:visual.taskFormat}};
 }};
-export const templates:PuzzleTemplate[]=[arithmetic,missingMiddle,oddTerm,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,polygonal,lookAndSay,weightedRecurrence,reverseAdd,digitSum,digitProduct,reverseDigitsPuzzle,collatz,primeGaps,modularCycle,tribonacci,lucas,pell,alternatingSteps,alternatingOperations,shapePattern];
+export const templates:PuzzleTemplate[]=[arithmetic,missingMiddle,oddTerm,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,polygonal,lookAndSay,weightedRecurrence,reverseAdd,digitSum,digitProduct,collatz,primeGaps,modularCycle,tribonacci,lucas,pell,alternatingSteps,alternatingOperations,interleaved,decreasingDifferences,shapePattern];
 // Alternating operations are less frequent than other templates in random play.
 const randomPlayTemplates=templates.flatMap(template=>template.id==='alternating-operations'?[template]:[template,template]);
 const categoryCache=new Map<PracticeDifficulty,string[]>();

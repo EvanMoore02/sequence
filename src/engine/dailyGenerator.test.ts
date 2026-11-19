@@ -13,6 +13,20 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
   if (puzzle.answerIndex !== undefined) observed.splice(puzzle.answerIndex, 0, puzzle.answer);
   const count = sequence.length + 1;
   switch (pattern.type) {
+    case 'interleaved': {
+      const terms = [...sequence];
+      const position = terms.length;
+      terms.push(position % 2 === 0
+        ? terms[position - 2] + pattern.firstStep
+        : terms[position - 2] + pattern.secondStep);
+      return terms;
+    }
+    case 'decreasing-difference': {
+      const terms = [...sequence];
+      const nextGap = pattern.firstDifference - (terms.length - 1) * pattern.growth;
+      terms.push(terms.at(-1)! - nextGap);
+      return terms;
+    }
     case 'arithmetic':
       return Array.from({ length: count }, (_, index) => observed[0] + index * pattern.step);
     case 'geometric':
@@ -198,6 +212,18 @@ function dateOffset(date: string, days: number): string {
 }
 
 describe('generated Daily Challenge', () => {
+  it('includes the new sequence patterns in deterministic Daily lineups', () => {
+    const seen = new Set<string>();
+    for (let day = 0; day < 60; day += 1) {
+      const date = new Date(Date.UTC(2026, 10, 2 + day)).toISOString().slice(0, 10);
+      const lineup = dailyPuzzles(date)!;
+      for (const puzzle of lineup) {
+        if (puzzle.pattern.type === 'interleaved' || puzzle.pattern.type === 'decreasing-difference') seen.add(puzzle.pattern.type);
+      }
+      expect(dailyPuzzles(date)).toEqual(lineup);
+    }
+    expect(seen).toEqual(new Set(['interleaved', 'decreasing-difference']));
+  });
   it('keeps the required difficulty order and returns the same lineup for a date', () => {
     const date = '2026-11-03';
     const first = dailyPuzzles(date);

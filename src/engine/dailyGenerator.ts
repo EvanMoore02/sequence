@@ -14,6 +14,21 @@ const lineupCache = new Map<number, DailyPuzzle[] | null>();
 type DailyPuzzle = AuthoredPuzzle | GeneratedPuzzle;
 type Pools = Record<Puzzle['difficulty'], DailyPuzzle[]>;
 let pools: Pools | undefined;
+const groupedPoolCache = new WeakMap<DailyPuzzle[], Map<string, DailyPuzzle[]>>();
+
+function groupedByRule(pool: DailyPuzzle[]): Map<string, DailyPuzzle[]> {
+  const cached = groupedPoolCache.get(pool);
+  if (cached) return cached;
+  const groups = new Map<string, DailyPuzzle[]>();
+  for (const puzzle of pool) {
+    const key = dailyRuleKey(puzzle);
+    const group = groups.get(key) ?? [];
+    group.push(puzzle);
+    groups.set(key, group);
+  }
+  groupedPoolCache.set(pool, groups);
+  return groups;
+}
 
 export function isWithinDailyCooldown(firstDay: number, secondDay: number): boolean {
   return Math.abs(firstDay - secondDay) < cooldownDays;
@@ -131,6 +146,8 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
   const blockedSignatures = new Set(recent.map(signature));
   const previousIds = new Set(previous.map((puzzle) => puzzle.id));
   const previousPatterns = new Set(previous.map(dailyRuleKey));
+  const recentRuleCounts = new Map<string, number>();
+  for (const puzzle of recent) recentRuleCounts.set(dailyRuleKey(puzzle), (recentRuleCounts.get(dailyRuleKey(puzzle)) ?? 0) + 1);
 
   for (let pass = 0; pass < 3; pass += 1) {
     const selected: DailyPuzzle[] = [];
@@ -142,19 +159,26 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
     for (let slot = 0; slot < lineupOrder.length; slot += 1) {
       const pool = available[lineupOrder[slot]];
       if (pool.length === 0) throw new Error('No generated puzzles are available for ' + lineupOrder[slot] + ' difficulty.');
-      const start = positiveModulo(hash(dayOffset + ':' + slot), pool.length);
+      const grouped = groupedByRule(pool);
+      const types = [...grouped.keys()].sort((left, right) =>
+        (recentRuleCounts.get(left) ?? 0) - (recentRuleCounts.get(right) ?? 0)
+        || hash(dayOffset + ':' + slot + ':' + pass + ':' + left) - hash(dayOffset + ':' + slot + ':' + pass + ':' + right));
       let chosen: DailyPuzzle | undefined;
-
-      for (let step = 0; step < pool.length; step += 1) {
-        const candidate = pool[(start + step) % pool.length];
-        const shapeSlot = slot === lineupOrder.length - 1;
-        if (shapeSlot !== isShapePuzzle(candidate) || (shapeSlot && isTwoByTwoPuzzle(candidate))) continue;
-        if (usedSignatures.has(signature(candidate)) || previousIds.has(candidate.id)) continue;
-        const variety = varietyKey(candidate);
-        if (pass === 0 && previousPatterns.has(dailyRuleKey(candidate))) continue;
-        if (pass < 2 && (usedCategories.has(candidate.category) || usedPatterns.has(variety))) continue;
-        chosen = candidate;
-        break;
+      for (const type of types) {
+        const candidates = grouped.get(type)!;
+        const variantStart = positiveModulo(hash(dayOffset + ':' + slot + ':' + pass + ':' + type), candidates.length);
+        for (let step = 0; step < candidates.length; step += 1) {
+          const candidate = candidates[(variantStart + step) % candidates.length];
+          const shapeSlot = slot === lineupOrder.length - 1;
+          if (shapeSlot !== isShapePuzzle(candidate) || (shapeSlot && isTwoByTwoPuzzle(candidate))) continue;
+          if (usedSignatures.has(signature(candidate)) || previousIds.has(candidate.id)) continue;
+          const variety = varietyKey(candidate);
+          if (pass === 0 && previousPatterns.has(type)) continue;
+          if (pass < 2 && (usedCategories.has(candidate.category) || usedPatterns.has(variety))) continue;
+          chosen = candidate;
+          break;
+        }
+        if (chosen) break;
       }
 
       if (!chosen) {
@@ -162,6 +186,8 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
         break;
       }
       selected.push(chosen);
+      const chosenType = dailyRuleKey(chosen);
+      recentRuleCounts.set(chosenType, (recentRuleCounts.get(chosenType) ?? 0) + 1);
       usedSignatures.add(signature(chosen));
       usedCategories.add(chosen.category);
       usedPatterns.add(varietyKey(chosen));

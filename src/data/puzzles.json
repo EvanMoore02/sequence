@@ -16,7 +16,7 @@
       "explanation": "Each number increases by 2, so the next number is 10.",
       "hints": [
         "Compare the gaps.",
-        "Measure each gap: they are all equal.",
+        "Subtract each number from the next and compare the results.",
         "For consecutive terms, next = current + 2."
       ],
       "pattern": {
@@ -39,7 +39,7 @@
       "explanation": "Each number increases by 3, so the next number is 15.",
       "hints": [
         "Notice how much the numbers change.",
-        "The gaps are equal, so check the amount between neighbors.",
+        "Work out the differences between neighboring terms, then check if they repeat.",
         "For consecutive terms, next = current + 3."
       ],
       "pattern": {
@@ -62,7 +62,7 @@
       "explanation": "Each number decreases by 5, so the next number is 10.",
       "hints": [
         "The sequence goes down.",
-        "Compare consecutive terms to find the repeated decrease.",
+        "Subtract each term from the one before it and compare the size of the drops.",
         "For consecutive terms, next = current - 5."
       ],
       "pattern": {
@@ -85,7 +85,7 @@
       "explanation": "Each number is twice the one before it, so the next number is 32.",
       "hints": [
         "Compare neighbors.",
-        "Divide a term by the one before it; the ratio is constant.",
+        "Divide each term by its predecessor and compare those quotients.",
         "For consecutive terms, next = current × 2."
       ],
       "pattern": {
@@ -108,7 +108,7 @@
       "explanation": "These are 1², 2², 3², and 4²; the next is 5² = 25.",
       "hints": [
         "These grow faster each step.",
-        "The terms are squares of consecutive counting numbers.",
+        "Check whether the terms match familiar whole numbers multiplied by themselves.",
         "Term n = n²."
       ],
       "pattern": {
@@ -133,7 +133,7 @@
       "explanation": "Each term is the sum of the two before it: 3 + 5 = 8.",
       "hints": [
         "Look back two positions.",
-        "To get a term, combine both immediately preceding terms.",
+        "For each term after the first two, test whether adding the previous pair gives it.",
         "Term n = term (n - 1) + term (n - 2)."
       ],
       "pattern": {
@@ -156,7 +156,7 @@
       "explanation": "Odd positions increase by 2; even positions increase by 10, so the next number is 30.",
       "hints": [
         "Split positions into two groups.",
-        "Track odd and even positions separately; each has its own step.",
+        "Label the positions odd and even, then compare values within each group.",
         "Odd terms: next = current + 2; even terms: next = current + 10."
       ],
       "pattern": {
@@ -182,7 +182,7 @@
       "explanation": "The gaps are 3, 5, 7, and 9; next add 11 to get 36.",
       "hints": [
         "Look at the differences.",
-        "The gaps are consecutive odd numbers, each 2 larger than the last.",
+        "Write down the gaps, then compare how much each gap changes.",
         "Gap n = previous gap + 2."
       ],
       "pattern": {
@@ -207,7 +207,7 @@
       "explanation": "The gaps are 1, 2, 4, and 8. Next add 16 to get 33.",
       "hints": [
         "Compare the differences.",
-        "Each gap is twice the gap immediately before it.",
+        "Write down consecutive gaps and compare each gap with the one before it.",
         "Gap n = 2 × previous gap."
       ],
       "pattern": {
@@ -230,7 +230,7 @@
       "explanation": "Each number is multiplied by 3, so the next is 243.",
       "hints": [
         "Check the ratios.",
-        "Divide each term by the one before it to see the repeating ratio.",
+        "Divide each term by the previous one and compare the quotients.",
         "For consecutive terms, next = current × 3."
       ],
       "pattern": {
@@ -253,7 +253,7 @@
       "explanation": "These are 1³, 2³, 3³, and 4³; next is 5³ = 125.",
       "hints": [
         "Growth is faster than squares.",
-        "The terms are cubes of consecutive counting numbers.",
+        "Check whether the terms match consecutive whole numbers multiplied by themselves three times.",
         "Term n = n³."
       ],
       "pattern": {
@@ -277,7 +277,7 @@
       "explanation": "Subtract 4, 8, and 16; next subtract 32 to get 40.",
       "hints": [
         "Look at gaps.",
-        "The gaps are negative and double in size at each step.",
+        "Write down the signed changes between terms, then compare their sizes.",
         "Gap n = 2 × previous gap."
       ],
       "pattern": {
@@ -300,7 +300,7 @@
       "explanation": "Each term is previous × 3 − 1: 41 × 3 − 1 = 122.",
       "hints": [
         "Try multiplication and an adjustment.",
-        "After multiplying a term, apply the same small adjustment each time.",
+        "Compare each term with three times its predecessor; note the leftover.",
         "For consecutive terms, next = current × 3 - 1."
       ],
       "pattern": {
@@ -325,7 +325,7 @@
       "explanation": "Odd positions count 1, 2, 3; even positions count by tens. The next even-position value is 30.",
       "hints": [
         "Two patterns are interleaved.",
-        "The even positions form their own sequence, counting by tens.",
+        "Follow just the even-position terms and compare their changes.",
         "Even-position term n = 10 × n."
       ],
       "pattern": {
@@ -351,7 +351,7 @@
       "explanation": "Multiply by 2, 3, 4, and 5; next multiply by 6 to get 720.",
       "hints": [
         "Look at the ratios.",
-        "Each term multiplies by the next counting number.",
+        "Divide each term by the previous one and list the multipliers.",
         "Term n = term (n - 1) × n."
       ],
       "pattern": {
@@ -374,7 +374,7 @@
       "explanation": "Multiply by 3, 4, and 5; next multiply 120 by 6 to get 720.",
       "hints": [
         "Compare each term with the one before it.",
-        "The multiplier is one more than the multiplier used previously.",
+        "List the multiplier between each pair of terms, then compare them.",
         "Term n = term (n - 1) × n."
       ],
       "pattern": {
@@ -397,7 +397,7 @@
       "explanation": "The gaps are 5, 15, and 25; the next gap is 35, giving 130.",
       "hints": [
         "Find the gaps between consecutive terms.",
-        "The gaps form an arithmetic sequence with a constant increase.",
+        "Write down the gaps and compare the increase from one gap to the next.",
         "Gap n = previous gap + 10."
       ],
       "pattern": {
@@ -421,7 +421,7 @@
       "explanation": "Each term is the previous term times 3 minus 2; 55 × 3 − 2 = 163.",
       "hints": [
         "Look for a repeated multiplication with a small adjustment.",
-        "Use the same multiplier and then the same adjustment on every term.",
+        "Compare each term with three times its predecessor; note the leftover.",
         "For consecutive terms, next = current × 3 - 2."
       ],
       "pattern": {
@@ -445,7 +445,7 @@
       "explanation": "Each term is the previous term times 3 plus 1; 121 × 3 + 1 = 364.",
       "hints": [
         "Compare each pair using multiplication.",
-        "The same multiplier is followed by the same positive adjustment each time.",
+        "Compare each term with three times its predecessor; note the leftover.",
         "For consecutive terms, next = current × 3 + 1."
       ],
       "pattern": {

@@ -31,6 +31,12 @@ Run `npm run validate:puzzles` to check required fields, valid difficulty, three
 
 Practice and Endless puzzles are generated on-device from templates in `src/engine/generator.ts`, including prime, triangular, look-and-say, and weighted-recurrence patterns. Each puzzle asks for the next number; higher difficulty levels use more challenging rules. Their three player-facing levels map to medium-, hard-, and expert-rated puzzles, in that order; Endless starts at Easy and caps at Hard. Daily Challenge puzzles are generated on-device from the browser's local date, with #001 anchored to November 2, 2026. Each day contains one medium-rated, two hard-rated, and two expert-rated puzzles in that order. Daily gameplay hides difficulty labels, and each lineup is stable on refresh with no puzzle shared between consecutive days. The authored puzzle bank is also included as a source of curated puzzles.
 
+## Review visual explanations with AI
+
+The offline review tool samples one puzzle from each visual pattern family and asks the OpenAI Responses API to check the current explanation and suggest a clearer rewrite. It does not edit source files; review the report at `review-output/visual-explanation-review.json` and apply any approved improvements to the deterministic explanation logic yourself. The game never calls the AI service.
+
+Set `OPENAI_API_KEY`, then run `npm run review:visual-explanations`. The tool defaults to `gpt-6-luna`; set `OPENAI_MODEL` only if you want to override it. Use `npm run review:visual-explanations -- --dry-run` to inspect the sample puzzles and prompt without making an API request. You can set a different report path with `--output <path>`.
+
 ## End-to-end tests
 
 Install the Playwright browser once with `npx playwright install chromium` (Linux CI can use `npx playwright install --with-deps chromium`), then run `npm run test:e2e`. The suite launches Vite and runs the Daily Challenge and Endless flows in desktop and phone-sized Chromium projects. Each test uses an isolated browser context and clears its local save before starting.

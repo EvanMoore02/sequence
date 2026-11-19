@@ -1,5 +1,3 @@
-import { Share2 } from 'lucide-react';
-
 export type DailyShareData = { challenge: string; date: string; points: number; solved: number; streak: number; time: string; results: boolean[] };
 
 export function DailyShareCard({ data }: { data: DailyShareData }) {
@@ -8,7 +6,6 @@ export function DailyShareCard({ data }: { data: DailyShareData }) {
     <div className="daily-share-score"><strong>{data.points}<span> / 500</span></strong><span>{data.date}</span></div>
     <div className="daily-share-grid" role="img" aria-label={data.solved + ' of 5 puzzles solved'}>{data.results.map((solved, index) => <i key={index} className={solved ? 'solved' : ''} />)}</div>
     <div className="daily-share-meta"><span>{data.solved}/5 solved</span><span>{data.streak} day streak</span><span>{data.time}</span></div>
-    <span className="daily-share-mark"><Share2 size={12} /> No answers revealed</span>
   </article>;
 }
 

@@ -10,6 +10,8 @@ function validate(p:ReturnType<typeof generatePracticePuzzle>){
  case'fibonacci':expect(all.slice(2).every((v,i)=>v===all[i]+all[i+1])).toBe(true);break;
  case'differences':{const gaps=all.slice(1).map((v,i)=>v-all[i]),delta=gaps[1]-gaps[0];expect(gaps.slice(2).every((v,i)=>v-gaps[i+1]===delta)).toBe(true);break}
  case'doubling-gaps':{const gaps=all.slice(1).map((v,i)=>v-all[i]);expect(gaps.slice(1).every((v,i)=>v===gaps[i]*2)).toBe(true);break}
+ case'interleaved':{const firstStep=Number(parts[3]),secondStep=Number(parts[4]);expect(all.filter((_,i)=>i%2===0).slice(1).every((v,i)=>v-all[i*2]===firstStep)).toBe(true);expect(all.filter((_,i)=>i%2===1).slice(1).every((v,i)=>v-all[i*2+1]===secondStep)).toBe(true);break}
+ case'decreasing-differences':{const first=Number(parts[2]),growth=Number(parts[3]),gaps=all.slice(1).map((v,i)=>all[i]-v);expect(gaps.every((gap,i)=>gap===first-i*growth)).toBe(true);expect(all.every((value)=>value>=0)).toBe(true);break}
  case'multiply-adjust':{const factor=Number(parts[2]),offset=Number(parts[3]);expect(all.slice(1).every((v,i)=>v===all[i]*factor+offset)).toBe(true);break}
  case'factorial':{const start=Number(parts[1]),fact=(n:number)=>{let x=1;for(let i=2;i<=n;i++)x*=i;return x};expect(all.every((v,i)=>v===fact(start+i))).toBe(true);break}
  case'primes':{const prime=(n:number)=>{if(n<2)return false;for(let d=2;d*d<=n;d++)if(n%d===0)return false;return true};expect(all.every(prime)).toBe(true);expect(all.slice(1).every((v,i)=>{for(let n=all[i]+1;n<v;n++)if(prime(n))return false;return prime(v)})).toBe(true);break}
