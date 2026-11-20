@@ -56,6 +56,16 @@ export default function SequenceDisplay({
 }) {
   const [selectedVisualOption, setSelectedVisualOption] = useState<number | null>(null);
   useEffect(() => setSelectedVisualOption(null), [puzzle.id]);
+  if (puzzle.letterPattern) {
+    const terms = [...puzzle.letterPattern.sequence, puzzle.letterPattern.answer];
+    return <div className="numbers letter-sequence" role="list" aria-label="Letter sequence">
+      {terms.map((term, index) => {
+        const missing = index === puzzle.letterPattern!.sequence.length;
+        const show = !missing || revealed;
+        return <b key={index} className={'tile' + (missing && !revealed ? ' unknown' : '') + (missing && revealed ? (solved ? ' success' : ' missed') : '')} role="listitem" aria-label={missing && !show ? 'Next letter missing' : 'Letter ' + term}>{show ? term : '?'}</b>;
+      })}
+    </div>;
+  }
   if (puzzle.visualPattern) {
     const visual = puzzle.visualPattern;
     return <div className="shape-question visual-question">

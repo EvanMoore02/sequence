@@ -1,7 +1,9 @@
 import type { AuthoredPuzzle } from '../data/puzzleTypes';
 import { puzzles as authoredPuzzles } from '../data/puzzles';
 import type { Puzzle } from '../types';
+import type { AnswerPattern } from '../data/puzzleTypes';
 import { templates, type GeneratedPuzzle } from './generator';
+import { makeDailyLetterPuzzles } from './letterPuzzles';
 
 const levels: Puzzle['difficulty'][] = ['Easy', 'Medium', 'Hard', 'Expert'];
 const dailyAnchor = Date.UTC(2026, 10, 2);
@@ -11,7 +13,8 @@ const samplesPerTemplate = 160;
 const minimumCandidateCount: Partial<Record<Puzzle['difficulty'], number>> = { Medium: 16, Hard: 32, Expert: 32 };
 const cache = new Map<string, DailyPuzzle[] | null>();
 const lineupCache = new Map<number, DailyPuzzle[] | null>();
-type DailyPuzzle = AuthoredPuzzle | GeneratedPuzzle;
+type DailyLetterPuzzle = Puzzle & { pattern: AnswerPattern; letterPattern: NonNullable<Puzzle['letterPattern']> };
+type DailyPuzzle = AuthoredPuzzle | GeneratedPuzzle | DailyLetterPuzzle;
 type Pools = Record<Puzzle['difficulty'], DailyPuzzle[]>;
 let pools: Pools | undefined;
 const groupedPoolCache = new WeakMap<DailyPuzzle[], Map<string, DailyPuzzle[]>>();
@@ -36,14 +39,14 @@ export function isWithinDailyCooldown(firstDay: number, secondDay: number): bool
 
 function signature(puzzle: DailyPuzzle): string {
   return JSON.stringify([
-    puzzle.visualPattern?.cells ?? puzzle.shapePattern?.sequence ?? puzzle.sequence,
+    puzzle.visualPattern?.cells ?? puzzle.shapePattern?.sequence ?? puzzle.letterPattern?.sequence ?? puzzle.sequence,
     puzzle.visualPattern?.choices ?? puzzle.shapePattern?.choices ?? null,
-    puzzle.visualPattern?.answerIndex ?? puzzle.shapePattern?.answer ?? puzzle.answer,
+    puzzle.visualPattern?.answerIndex ?? puzzle.shapePattern?.answer ?? puzzle.letterPattern?.answer ?? puzzle.answer,
   ]);
 }
 
 function isShapePuzzle(puzzle: DailyPuzzle): boolean {
-  return Boolean(puzzle.visualPattern || puzzle.shapePattern || puzzle.pattern.type === 'shape-cycle' || puzzle.pattern.type === 'visual-matrix');
+  return !puzzle.letterPattern && Boolean(puzzle.visualPattern || puzzle.shapePattern || puzzle.pattern.type === 'shape-cycle' || puzzle.pattern.type === 'visual-matrix');
 }
 
 function isTwoByTwoPuzzle(puzzle: DailyPuzzle): boolean {
@@ -51,11 +54,13 @@ function isTwoByTwoPuzzle(puzzle: DailyPuzzle): boolean {
 }
 
 function varietyKey(puzzle: DailyPuzzle): string {
+  if (puzzle.letterPattern) return 'letter:' + puzzle.letterPattern.family + ':' + puzzle.letterPattern.firstStep + ':' + (puzzle.letterPattern.secondStep ?? '');
   if (puzzle.visualPattern) return 'visual:' + (puzzle.visualPattern.family ?? 'matrix') + ':' + (puzzle.visualPattern.taskFormat ?? 'matrix') + ':' + (puzzle.visualPattern.rows ?? 3) + 'x' + (puzzle.visualPattern.columns ?? 3) + ':' + (puzzle.visualPattern.ruleTypes ?? []).join('+');
   return puzzle.pattern.type + ':' + (puzzle.taskFormat ?? 'next-term');
 }
 
 function dailyRuleKey(puzzle: DailyPuzzle): string {
+  if (puzzle.letterPattern) return 'letter-sequence';
   return puzzle.visualPattern ? 'visual:' + (puzzle.visualPattern.family ?? 'matrix') : puzzle.pattern.type;
 }
 
@@ -86,6 +91,9 @@ function makePools(): Pools {
   };
 
   authoredPuzzles.forEach(add);
+  for (const [index, puzzle] of makeDailyLetterPuzzles().entries()) {
+    add({ ...puzzle, sequence: [index], pattern: { type: 'visual-matrix', shapeStep: 1, fillByRow: false, rotationByColumn: false } } as DailyLetterPuzzle);
+  }
   for (const template of templates) {
     const sampleCount = template.id === 'alternating-operations' ? samplesPerTemplate / 4 : samplesPerTemplate;
     for (let attempt = 0; attempt < sampleCount; attempt += 1) {
@@ -160,7 +168,8 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
       const pool = available[lineupOrder[slot]];
       if (pool.length === 0) throw new Error('No generated puzzles are available for ' + lineupOrder[slot] + ' difficulty.');
       const grouped = groupedByRule(pool);
-      const types = [...grouped.keys()].sort((left, right) =>
+      const wantsLetters = positiveModulo(dayOffset, 3) === 2;
+      const types = [...grouped.keys()].filter((type) => (type === 'letter-sequence') === (wantsLetters && slot === 0)).sort((left, right) =>
         (recentRuleCounts.get(left) ?? 0) - (recentRuleCounts.get(right) ?? 0)
         || hash(dayOffset + ':' + slot + ':' + pass + ':' + left) - hash(dayOffset + ':' + slot + ':' + pass + ':' + right));
       let chosen: DailyPuzzle | undefined;
@@ -203,7 +212,8 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
   for (let slot = 0; slot < lineupOrder.length; slot += 1) {
     const pool = available[lineupOrder[slot]];
     const shapeSlot = slot === lineupOrder.length - 1;
-    const candidate = pool.find((item) => isShapePuzzle(item) === shapeSlot && !(shapeSlot && isTwoByTwoPuzzle(item)) && !blocked.has(signature(item)));
+    const wantsLetters = positiveModulo(dayOffset, 3) === 2;
+    const candidate = pool.find((item) => isShapePuzzle(item) === shapeSlot && !(shapeSlot && isTwoByTwoPuzzle(item)) && Boolean(item.letterPattern) === (wantsLetters && slot === 0) && !blocked.has(signature(item)));
     if (!candidate) throw new Error('The Daily Challenge candidate pool is smaller than its 15-day repeat window.');
     selected.push(candidate);
     blocked.add(signature(candidate));

@@ -58,7 +58,7 @@ export default function DailyPreview({ onBack }: { onBack: () => void }) {
               {puzzles ? puzzles.map((puzzle, puzzleIndex) => (
                 <article className="daily-preview-puzzle" key={puzzle.id}>
                   <label>Puzzle {puzzleIndex + 1}</label>
-                  {puzzle.visualPattern || puzzle.answerIndex !== undefined || puzzle.taskFormat==='find-odd-term' ? <SequenceDisplay puzzle={puzzle} revealed solved /> : puzzle.shapePattern ? <div className="daily-preview-numbers shape-sequence" aria-label="Shape pattern">
+                  {puzzle.letterPattern || puzzle.visualPattern || puzzle.answerIndex !== undefined || puzzle.taskFormat==='find-odd-term' ? <SequenceDisplay puzzle={puzzle} revealed solved /> : puzzle.shapePattern ? <div className="daily-preview-numbers shape-sequence" aria-label="Shape pattern">
                     {puzzle.shapePattern.sequence.map((shape, termIndex) => <b className="tile" key={termIndex}>{shape}</b>)}
                     <b className="tile daily-preview-answer">{puzzle.shapePattern.answer}</b>
                   </div> : <div className="daily-preview-numbers" aria-label={'Sequence: ' + puzzle.sequence.join(', ') + '. Answer: ' + puzzle.answer}>
