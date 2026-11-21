@@ -61,3 +61,18 @@ html[data-text-size=large] body{zoom:1.08}:root[data-contrast=high]{--line:#555f
 
 .numbers>.tile.long-number{container-type:inline-size}.numbers>.tile.long-number>span{white-space:nowrap;letter-spacing:-.04em}.numbers>.tile.term-length-5>span{font-size:clamp(9px,29cqi,28px)}.numbers>.tile.term-length-6>span{font-size:clamp(9px,24cqi,28px)}.numbers>.tile.term-length-7>span{font-size:clamp(9px,20cqi,28px)}
 
+.daily-scoring-note{text-align:center;color:#858b82;font-size:10px;line-height:1.4;margin:8px 0 0}
+/* Daily puzzle feedback and celebration motion */
+.numbers>.tile{animation:tile-reveal .28s ease-out both}
+.numbers>.tile:nth-child(2){animation-delay:.035s}.numbers>.tile:nth-child(3){animation-delay:.07s}.numbers>.tile:nth-child(4){animation-delay:.105s}.numbers>.tile:nth-child(5){animation-delay:.14s}.numbers>.tile:nth-child(6){animation-delay:.175s}
+.tile.success{animation:answer-correct .42s ease-out}.tile.missed{animation:answer-missed .32s ease-in-out}
+.steps i{transition:background-color .25s ease,transform .25s ease}.steps .done{transform:scaleY(1.35)}
+.score{animation:score-pop .55s cubic-bezier(.2,.8,.3,1.2) both}.summary div:nth-child(4) strong{animation:streak-glow .9s ease-out .25s both}
+.perfect-results .resulthero{position:relative}.perfect-results .resulthero::after{content:'✦  ✧  ✦';position:absolute;top:4px;left:50%;color:#c39a48;font-size:20px;letter-spacing:18px;white-space:nowrap;pointer-events:none;animation:perfect-sparkle 1.3s ease-out both}
+@keyframes tile-reveal{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes answer-correct{50%{transform:scale(1.1);box-shadow:0 0 0 5px #71987535}}
+@keyframes answer-missed{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes score-pop{from{opacity:.5;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+@keyframes streak-glow{50%{color:#c18c28;transform:scale(1.12)}}
+@keyframes perfect-sparkle{0%{opacity:0;transform:translate(-50%,-8px) scale(.7)}25%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px) scale(1.1)}}
+@media(prefers-reduced-motion:reduce){.numbers>.tile,.tile.success,.tile.missed,.score,.summary div:nth-child(4) strong,.perfect-results .resulthero::after{animation:none!important}.steps i{transition:none}}

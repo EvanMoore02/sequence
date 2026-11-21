@@ -4,14 +4,15 @@ export type DailyShareData = { challenge: string; date: string; points: number; 
 
 export function DailyShareCard({ data }: { data: DailyShareData }) {
   const shareUrl = typeof window === 'undefined' ? '' : window.location.href;
-  const shareText = `SEQUENCE Daily Challenge #${data.challenge}\n${data.points}/500 points · ${data.solved}/5 solved · ${data.streak} day streak\n${shareUrl}`;
+  const shareText = `SEQUENCE Daily Challenge #${data.challenge}\n${data.points}/500 points · ${data.solved}/5 solved · ${data.streak} day streak`;
+  const textFallback = `${shareText}\n${shareUrl}`;
   const [shareStatus, setShareStatus] = useState('');
   async function share() {
     setShareStatus('');
     try {
       const image = await makeDailyShareImage(data);
       if (navigator.share && navigator.canShare?.({ files: [image] })) {
-        await navigator.share({ title: `SEQUENCE Daily Challenge #${data.challenge}`, text: shareText, url: shareUrl, files: [image] });
+        await navigator.share({ url: shareUrl, files: [image] });
         return;
       }
     } catch (error) {
@@ -19,9 +20,16 @@ export function DailyShareCard({ data }: { data: DailyShareData }) {
     }
     try {
       if (navigator.share) await navigator.share({ title: `SEQUENCE Daily Challenge #${data.challenge}`, text: shareText, url: shareUrl });
-      else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(shareText); setShareStatus('Score and link copied.'); }
-      else { window.prompt('Copy your score and link:', shareText); setShareStatus('Copy your score and link to share.'); }
-    } catch { setShareStatus('Sharing was unavailable. You can copy the score and link below.'); }
+      else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(textFallback); setShareStatus('Score and link copied.'); }
+      else { window.prompt('Copy your score and link:', textFallback); setShareStatus('Copy your score and link to share.'); }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(textFallback);
+        setShareStatus('Score and link copied.');
+      } catch {
+        setShareStatus('Sharing is unavailable on this device.');
+      }
+    }
   }
   return <article className="daily-share-card" aria-label="Spoiler-free Daily Challenge scorecard">
     <header>SEQUENCE <span>DAILY CHALLENGE #{data.challenge}</span></header>

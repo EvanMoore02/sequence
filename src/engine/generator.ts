@@ -14,38 +14,37 @@ const collatzNext=(n:number)=>n%2===0?n/2:3*n+1;
 const sayNumber=(n:number)=>{const text=String(n);let result='';for(let i=0;i<text.length;){let end=i+1;while(end<text.length&&text[end]===text[i])end++;result+=String(end-i)+text[i];i=end}return Number(result)};
 function patternEquation(pattern:AnswerPattern):string{
  switch(pattern.type){
-  case 'interleaved':return 'Odd-position terms add '+pattern.firstStep+' each time; even-position terms add '+pattern.secondStep+'.';
-  case 'decreasing-difference':return 'Each gap decreases by '+pattern.growth+'; continue with the next smaller gap.';
-  case 'arithmetic':return 'For consecutive terms, next = current '+(pattern.step<0?'- '+Math.abs(pattern.step):'+ '+pattern.step)+'.';
-  case 'geometric':return 'For consecutive terms, next = current × '+pattern.factor+'.';
-  case 'power':return 'Term k = k^'+pattern.exponent+' for consecutive values of k.';
-  case 'fibonacci':return 'Term n = term (n - 1) + term (n - 2).';
-  case 'alternating':return pattern.byPosition?'Odd-position terms: next = current + '+pattern.oddStep+'; even-position terms: next = current + '+pattern.evenStep+'.':'Next = current + alternating step; the steps alternate between '+pattern.oddStep+' and '+pattern.evenStep+'.';
-  case 'increasing-difference':return 'Next gap = previous gap + '+pattern.growth+'; next term = current term + next gap.';
-  case 'doubling-difference':return 'Next gap = previous gap × 2; next term = current term + next gap.';
-  case 'multiply-adjust':return 'For consecutive terms, next = current × '+pattern.factor+(pattern.offset<0?' - '+Math.abs(pattern.offset):' + '+pattern.offset)+'.';
-  case 'factorial':return 'Next term = current term × next integer multiplier.';
-  case 'triangular':return 'Term k = k × (k + 1) / 2 for consecutive values of k.';
-  case 'look-and-say':return 'Next term = read off the runs of digits in the current term.';
-  case 'alternating-operation':return 'Alternate these rules: next = current × '+pattern.factorA+(pattern.offsetA<0?' - '+Math.abs(pattern.offsetA):' + '+pattern.offsetA)+', then next = current × '+pattern.factorB+(pattern.offsetB<0?' - '+Math.abs(pattern.offsetB):' + '+pattern.offsetB)+'.';
-  case 'weighted-recurrence':return 'Next = current × '+pattern.factor+' + previous term'+(pattern.offset<0?' - '+Math.abs(pattern.offset):' + '+pattern.offset)+'.';
-  case 'reverse-add':return 'Next = current + the number formed by reversing its digits.';
-  case 'collatz':return 'If current is even, next = current / 2; if odd, next = 3 × current + 1.';
-  case 'prime-gaps':return 'Next gap = previous gap + '+pattern.growth+'; next term = current prime + next gap.';
-  case 'modular-cycle':return 'Add '+pattern.step+' each time, wrapping around after '+pattern.modulus+' to 0.';
-  case 'digit-sum':return 'Next term = current term + the sum of its digits.';
-  case 'tribonacci':return 'Each term is the sum of the previous three terms.';
-  case 'digit-product':return 'Next term = current term + the product of its digits.';
-  case 'reverse-digits':return 'Reverse the digits of each term to get the next one.';
-  case 'lucas':return 'Each term is the sum of the previous two, starting with 2 and 1.';
-  case 'pell':return 'Next term = 2 × current term + the term before it.';
-  case 'polygonal':return 'Term n = ((sides - 2)n² - (sides - 4)n) / 2.';
-  case 'prime':return 'Each term is the next prime number.';
-  case 'shape-cycle':return 'Each step advances '+pattern.step+' place(s) in the repeating shape cycle.';
-  case 'visual-matrix':return 'Apply the same visual transformation across the row or pair.';
+  case 'interleaved':return 'Follow the odd-position numbers: add '+pattern.firstStep+' each time. The even-position numbers follow their own pattern.';
+  case 'decreasing-difference':return 'The amounts subtracted get smaller by '+pattern.growth+' each time.';
+  case 'arithmetic':return pattern.step<0?'Subtract '+Math.abs(pattern.step)+' from each number to get the next.':'Add '+pattern.step+' to each number to get the next.';
+  case 'geometric':return 'Multiply each number by '+pattern.factor+' to get the next.';
+  case 'power':return pattern.exponent===2?'The terms are consecutive whole numbers multiplied by themselves.':'The terms are consecutive whole numbers multiplied by themselves three times.';
+  case 'fibonacci':return 'Add the previous two numbers to get the next one.';
+  case 'alternating':return pattern.byPosition?'Odd-position numbers add '+pattern.oddStep+' each time; even-position numbers add '+pattern.evenStep+'.':'The steps alternate between adding '+pattern.oddStep+' and adding '+pattern.evenStep+'.';
+  case 'increasing-difference':return 'The gaps grow by '+pattern.growth+' each time. Find the next gap, then add it to the last number.';
+  case 'doubling-difference':return 'Each gap is twice the gap before it. Double the last gap and add it to the last number.';
+  case 'multiply-adjust':return 'Multiply each number by '+pattern.factor+(pattern.offset<0?' and subtract '+Math.abs(pattern.offset):' and add '+pattern.offset)+' to get the next.';
+  case 'factorial':return 'Multiply by the next counting number each time. The multipliers go up by one.';
+  case 'triangular':return 'Add the next counting number each time: 1, then 2, then 3, and so on.';
+  case 'look-and-say':return 'Read each run of repeated digits as a count and a digit to make the next term.';
+  case 'alternating-operation':return 'Two rules take turns: multiply by '+pattern.factorA+(pattern.offsetA<0?' and subtract '+Math.abs(pattern.offsetA):' and add '+pattern.offsetA)+', then multiply by '+pattern.factorB+(pattern.offsetB<0?' and subtract '+Math.abs(pattern.offsetB):' and add '+pattern.offsetB)+'.';
+  case 'weighted-recurrence':return 'Multiply the last number by '+pattern.factor+', then add the number before it'+(pattern.offset<0?' and subtract '+Math.abs(pattern.offset):pattern.offset>0?' and add '+pattern.offset:'')+'.';
+  case 'reverse-add':return 'Reverse the digits of a number, then add that reversed number to the original.';
+  case 'collatz':return 'For an even number, halve it. For an odd number, triple it and add one.';
+  case 'prime-gaps':return 'The gaps between these prime numbers grow by '+pattern.growth+' each time.';
+  case 'modular-cycle':return 'Add '+pattern.step+' each time. When the count reaches '+pattern.modulus+', start again at 0.';
+  case 'digit-sum':return 'Add the digits of a number, then add that total to the number.';
+  case 'tribonacci':return 'Add the previous three numbers to get the next one.';
+  case 'digit-product':return 'Multiply the digits in a number, then add that product to the number.';
+  case 'reverse-digits':return 'Reverse the digits to get the next number.';
+  case 'lucas':return 'Start with 2 and 1, then add the previous two numbers each time.';
+  case 'pell':return 'Double the last number and add the number before it.';
+  case 'polygonal':return 'These numbers count dots arranged in matching '+pattern.sides+'-sided shapes.';
+  case 'prime':return 'Each term is the next number that has no factors besides 1 and itself.';
+  case 'shape-cycle':return 'Move '+pattern.step+' place(s) forward in the repeating shape order.';
+  case 'visual-matrix':return 'Look for the same change repeating across a row or pair of shapes.';
  }
-}
-function make(id:string,category:string,sequence:number[],answer:number,rule:string,explanation:string,hints:[string,string,string],pattern:AnswerPattern):GeneratedPuzzle{
+}function make(id:string,category:string,sequence:number[],answer:number,rule:string,explanation:string,hints:[string,string,string],pattern:AnswerPattern):GeneratedPuzzle{
  const templateId=id.split(':')[0],rating=rateDifficulty(sequence,answer,pattern);
  const specificHint=templateId==='visual-matrix'?hints[2]:patternEquation(pattern);
  return {id,templateId,category,difficulty:rating.difficulty,difficultyScore:rating.score,pattern,sequence,answer,rule,explanation,hints:[hints[0],hints[1],specificHint]};

@@ -13,7 +13,7 @@ Open the local URL printed by Vite. Daily progress, Practice and Endless session
 
 ## Modes
 
-- **Daily Challenge:** five date-selected puzzles, three attempts each, hints, scoring, streaks, and results.
+- **Daily Challenge:** five date-selected puzzles, three attempts each, hints, scoring based on hints used (100/70/40/10 points), extra-try penalties, streaks, and results.
 - **Practice:** choose Easy, Medium, or Hard, or mix the available puzzles; attempts are unlimited.
 - **Endless:** three lives, three difficulty levels that rise every three solves, points based on guesses and hints, and a personal best.
 

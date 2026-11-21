@@ -1,10 +1,11 @@
 import type { Result } from '../types';
 
-const pointsByAttempt = [100, 70, 40];
+const pointsByHint = [100, 70, 40, 10];
 
 export function dailyPuzzlePoints(attempts: number, hints: number): number {
-  const base = pointsByAttempt[Math.min(2, Math.max(0, attempts - 1))];
-  return Math.max(0, base - Math.max(0, hints) * 10);
+  const base = pointsByHint[Math.min(3, Math.max(0, hints))];
+  const extraAttempts = Math.max(0, attempts - 1);
+  return Math.max(10, base - extraAttempts * 10);
 }
 
 export function dailyScore(results: Result[]): number {
