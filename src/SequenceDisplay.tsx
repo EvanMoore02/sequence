@@ -11,9 +11,13 @@ function ShapeIcon({ shape }: { shape: VisualShape }) {
     arrow: '32,3 59,29 43,29 43,61 21,61 21,29 5,29',
     'l-block': '8,8 30,8 30,36 56,36 56,58 8,58',
   };
+  const innerPoints=shape.inside?points[shape.inside]:undefined;
   const count=shape.count??1,positions:[number,number,number][]=count===1?[[0,0,1]]:count===2?[[-11,-5,.7],[11,5,.7]]:[[-14,-8,.58],[14,-8,.58],[0,15,.58]];
   return <svg className="visual-shape" viewBox="0 0 64 64" aria-hidden="true">
-    {positions.map(([x,y,scale],index)=><polygon key={index} points={points[shape.kind]} transform={'translate('+x+' '+y+') translate(32 32) scale('+scale+') translate(-32 -32) rotate(' + shape.rotation + ' 32 32)'} fill={shape.fill === 'solid' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />)}
+    {positions.map(([x,y,scale],index)=><g key={index} transform={'translate('+x+' '+y+') translate(32 32) scale('+scale+') translate(-32 -32) rotate(' + shape.rotation + ' 32 32)'}>
+      <polygon points={points[shape.kind]} fill={shape.fill === 'solid' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      {innerPoints&&<polygon points={innerPoints} transform="translate(32 32) scale(.42) translate(-32 -32)" fill={shape.fill==='solid'?'white':'currentColor'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />}
+    </g>)}
   </svg>;
 }
 
@@ -42,7 +46,7 @@ function TileImage({ tile }: { tile: VisualShape[] }) {
 function describeTile(tile: VisualShape[]): string {
   if(tile.length===0)return 'empty tile';
   const positions=['top-left','top-right','bottom-left','bottom-right'];
-  return tile.map((shape)=>[shape.count&&shape.count>1?shape.count+' copies of':undefined,shape.fill,shapeNames[shape.kind],shape.rotation?shape.rotation+' degrees clockwise':undefined,shape.slot===undefined?undefined:'in the '+positions[shape.slot]].filter(Boolean).join(' ')).join(' and ');
+  return tile.map((shape)=>[shape.count&&shape.count>1?shape.count+' copies of':undefined,shape.fill,shapeNames[shape.kind],shape.inside?'containing a smaller '+shapeNames[shape.inside]:undefined,shape.rotation?shape.rotation+' degrees clockwise':undefined,shape.slot===undefined?undefined:'in the '+positions[shape.slot]].filter(Boolean).join(' ')).join(' and ');
 }
 
 export default function SequenceDisplay({
@@ -71,11 +75,11 @@ export default function SequenceDisplay({
     return <div className="shape-question visual-question">
       <p className="visual-instruction">{visual.taskFormat==='analogy'?'Choose the figure that completes the analogy.':visual.taskFormat==='find-odd-tile'?'Choose the tile that breaks the pattern.':'Choose the figure that completes the pattern.'}</p>
       <div className="visual-matrix" role="grid" aria-label={visual.taskFormat==='analogy'?'Visual analogy':'Shape reasoning matrix'} style={{gridTemplateColumns:'repeat('+(visual.columns??3)+',minmax(58px,1fr))'}}>
-        {visual.cells.map((tile, index) => <div className={'visual-cell' + (!tile ? (revealed ? ' visual-answer-cell '+(solved?'solved':'missed') : ' unknown') : '')} role="gridcell" key={index} aria-label={tile?'Row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)+': '+describeTile(tile):revealed?'Row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)+': '+describeTile(visual.choices[visual.answerIndex]):'Missing cell, row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)}>
+        {visual.cells.map((tile, index) => <div className={'visual-cell' + (!tile ? (revealed ? ' visual-answer-cell '+(solved?'solved':'missed') : ' unknown') : '') + (visual.taskFormat==='find-odd-tile'&&revealed&&index===visual.missingIndex?' visual-answer-cell '+(solved?'solved':'missed'):'')} role="gridcell" key={index} aria-label={tile?'Row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)+': '+describeTile(tile):revealed?'Row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)+': '+describeTile(visual.choices[visual.answerIndex]):'Missing cell, row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)}>
           {tile ? <TileImage tile={tile} /> : revealed ? <TileImage tile={visual.choices[visual.answerIndex]} /> : <span className="visual-missing-mark" aria-hidden="true">?</span>}
         </div>)}
       </div>
-      <div className="visual-options" role="group" aria-label={visual.taskFormat==='analogy'?'Choose the answer to the analogy':'Choose the missing figure'}>
+      <div className="visual-options" role="group" aria-label={visual.taskFormat==='analogy'?'Choose the answer to the analogy':visual.taskFormat==='find-odd-tile'?'Choose the tile that breaks the pattern':'Choose the missing figure'}>
         {visual.choices.map((tile, index) => <button type="button" key={index} disabled={revealed} aria-label={'Option ' + String.fromCharCode(65 + index) + ': ' + describeTile(tile)} aria-pressed={selectedVisualOption === index} className={revealed && index === visual.answerIndex ? 'correct-option' : revealed && selectedVisualOption === index ? 'incorrect-option' : selectedVisualOption === index ? 'selected-option' : ''} onClick={() => {
           const input = ['answer', 'practice-answer', 'endless-answer'].map((id) => document.getElementById(id)).find((element) => element instanceof HTMLInputElement);
           if (!input) return;

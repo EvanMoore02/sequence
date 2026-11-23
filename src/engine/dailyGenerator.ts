@@ -49,10 +49,6 @@ function isShapePuzzle(puzzle: DailyPuzzle): boolean {
   return !puzzle.letterPattern && Boolean(puzzle.visualPattern || puzzle.shapePattern || puzzle.pattern.type === 'shape-cycle' || puzzle.pattern.type === 'visual-matrix');
 }
 
-function isTwoByTwoPuzzle(puzzle: DailyPuzzle): boolean {
-  return puzzle.visualPattern?.rows === 2 && puzzle.visualPattern.columns === 2;
-}
-
 function varietyKey(puzzle: DailyPuzzle): string {
   if (puzzle.letterPattern) return 'letter:' + puzzle.letterPattern.family + ':' + puzzle.letterPattern.firstStep + ':' + (puzzle.letterPattern.secondStep ?? '');
   if (puzzle.visualPattern) return 'visual:' + (puzzle.visualPattern.family ?? 'matrix') + ':' + (puzzle.visualPattern.taskFormat ?? 'matrix') + ':' + (puzzle.visualPattern.rows ?? 3) + 'x' + (puzzle.visualPattern.columns ?? 3) + ':' + (puzzle.visualPattern.ruleTypes ?? []).join('+');
@@ -144,6 +140,12 @@ function positiveModulo(value: number, modulus: number): number {
   return ((value % modulus) + modulus) % modulus;
 }
 
+function shapeSlotForDay(dayOffset: number): number {
+  // Rotate visual puzzles between the two Expert slots so they do not always
+  // appear at the end of the challenge.
+  return 3 + positiveModulo(dayOffset, 2);
+}
+
 const lineupOrder = ['Medium', 'Hard', 'Hard', 'Expert', 'Expert'] as const;
 
 /**
@@ -154,6 +156,7 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
   const blockedSignatures = new Set(recent.map(signature));
   const previousIds = new Set(previous.map((puzzle) => puzzle.id));
   const previousPatterns = new Set(previous.map(dailyRuleKey));
+  const shapeSlot = shapeSlotForDay(dayOffset);
   const recentRuleCounts = new Map<string, number>();
   for (const puzzle of recent) recentRuleCounts.set(dailyRuleKey(puzzle), (recentRuleCounts.get(dailyRuleKey(puzzle)) ?? 0) + 1);
 
@@ -178,8 +181,8 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
         const variantStart = positiveModulo(hash(dayOffset + ':' + slot + ':' + pass + ':' + type), candidates.length);
         for (let step = 0; step < candidates.length; step += 1) {
           const candidate = candidates[(variantStart + step) % candidates.length];
-          const shapeSlot = slot === lineupOrder.length - 1;
-          if (shapeSlot !== isShapePuzzle(candidate) || (shapeSlot && isTwoByTwoPuzzle(candidate))) continue;
+          const wantsShape = slot === shapeSlot;
+          if (wantsShape !== isShapePuzzle(candidate)) continue;
           if (usedSignatures.has(signature(candidate)) || previousIds.has(candidate.id)) continue;
           const variety = varietyKey(candidate);
           if (pass === 0 && previousPatterns.has(type)) continue;
@@ -211,9 +214,9 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
   const blocked = new Set([...recent.map(signature), ...previous.map(signature)]);
   for (let slot = 0; slot < lineupOrder.length; slot += 1) {
     const pool = available[lineupOrder[slot]];
-    const shapeSlot = slot === lineupOrder.length - 1;
+    const wantsShape = slot === shapeSlot;
     const wantsLetters = positiveModulo(dayOffset, 3) === 2;
-    const candidate = pool.find((item) => isShapePuzzle(item) === shapeSlot && !(shapeSlot && isTwoByTwoPuzzle(item)) && Boolean(item.letterPattern) === (wantsLetters && slot === 0) && !blocked.has(signature(item)));
+    const candidate = pool.find((item) => isShapePuzzle(item) === wantsShape && Boolean(item.letterPattern) === (wantsLetters && slot === 0) && !blocked.has(signature(item)));
     if (!candidate) throw new Error('The Daily Challenge candidate pool is smaller than its 15-day repeat window.');
     selected.push(candidate);
     blocked.add(signature(candidate));
@@ -274,8 +277,8 @@ export function hasDailyComposition(ids: string[]): boolean {
   const puzzlesForIds = ids.map((id) => byId.get(id));
   if (puzzlesForIds.some((puzzle) => !puzzle)) return false;
   const hasRequiredDifficultyOrder = puzzlesForIds.every((puzzle, index) => puzzle!.difficulty === lineupOrder[index]);
-  const finalPuzzle = puzzlesForIds[4]!;
-  return hasRequiredDifficultyOrder && puzzlesForIds.some((puzzle) => isShapePuzzle(puzzle!)) && Boolean(finalPuzzle.visualPattern) && !isTwoByTwoPuzzle(finalPuzzle) && new Set(ids).size === 5;
+  const shapeSlots = puzzlesForIds.flatMap((puzzle, index) => isShapePuzzle(puzzle!) ? [index] : []);
+  return hasRequiredDifficultyOrder && shapeSlots.length === 1 && (shapeSlots[0] === 3 || shapeSlots[0] === 4) && new Set(ids).size === 5;
 }
 
 export function isCurrentDailyIds(date: string, ids: string[]): boolean {

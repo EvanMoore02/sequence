@@ -27,6 +27,14 @@ function validate(p:ReturnType<typeof generatePracticePuzzle>){
 }
 describe('practice puzzle generator',()=>{
  it('generates internally consistent puzzles for every template',()=>{for(const t of templates){const p=t.generate(rngFrom(12345));validate(p)}});
+ it('avoids digit-product sequences that stall when a term contains zero',()=>{
+  const template=templates.find((item)=>item.id==='digit-product')!;
+  for(let seed=1;seed<=200;seed++){
+   const puzzle=template.generate(rngFrom(seed)),terms=[...puzzle.sequence,puzzle.answer];
+   expect(terms.slice(1).every((term,index)=>term>terms[index])).toBe(true);
+   expect(terms.slice(0,-1).every((term)=>!String(term).includes('0'))).toBe(true);
+  }
+ });
  it('uses distinct visual reasoning families with eight validated options',()=>{
   const visual=templates.find((template)=>template.id==='visual-matrix')!;
   const families=new Set<string>();
@@ -35,8 +43,8 @@ describe('practice puzzle generator',()=>{
    const puzzle=visual.generate(rngFrom(seed*104729)),matrix=puzzle.visualPattern!;
    families.add(matrix.family!);
    expect(matrix.cells).toHaveLength((matrix.rows??3)*(matrix.columns??3));
-   expect(matrix.cells.filter((cell)=>cell===null)).toHaveLength(1);
-   expect(matrix.cells[matrix.missingIndex??8]).toBeNull();
+   if(matrix.taskFormat==='find-odd-tile')expect(matrix.cells.every((cell)=>cell!==null)).toBe(true);
+   else{expect(matrix.cells.filter((cell)=>cell===null)).toHaveLength(1);expect(matrix.cells[matrix.missingIndex??8]).toBeNull();}
    expect(matrix.choices).toHaveLength(8);
    expect(new Set(matrix.choices.map((choice)=>JSON.stringify(choice))).size).toBe(8);
    expect(matrix.choices[matrix.answerIndex]).toBeDefined();
@@ -53,10 +61,10 @@ describe('practice puzzle generator',()=>{
     if(shape.rotation)expect(explanation).toContain(shape.rotation+' degrees clockwise');
     if(shape.slot!==undefined)expect(explanation).toContain(['top-left','top-right','bottom-left','bottom-right'][shape.slot]);
    }
-   const familyTerms:Record<string,string>={'attribute-cycle':'shape advances','row-distribution':'row 3 and column',reflection:'mirror','count-progression':'count rises by one','shape-xor':'remove it and keep the other shapes','shape-union':'keep it once','orbit-movement':'one corner clockwise','analogy-transform':'bottom row'};
+   const familyTerms:Record<string,string>={'attribute-cycle':'shape advances','row-distribution':'row 3 and column',reflection:'mirror','count-progression':'count rises by one','shape-xor':'remove it and keep the other shapes','shape-union':'keep it once','orbit-movement':'one corner clockwise','analogy-transform':'bottom row','nested-shapes':'larger outer shape','shape-overlap':'shared by the first two tiles','diagonal-symmetry':'mirrors across','odd-tile-out':'follows the same rule'};
    expect(explanation).toContain(familyTerms[matrix.family!]);
   }
-  expect(families.size).toBe(8);
+  expect(families.size).toBe(12);
  });
  it('returns puzzles at the selected difficulty and bounded values',()=>{for(const [level,rating] of [['Easy','Medium'],['Medium','Hard'],['Hard','Expert']] as const){for(let seed=1;seed<=100;seed++){const p=generatePracticePuzzle(level,[],rngFrom(seed));expect(p.difficulty).toBe(rating);validate(p)}}});
  it('supports all player levels without Easy-rated puzzles and avoids recent IDs',()=>{const rng=rngFrom(991);let recent:string[]=[];for(let i=0;i<30;i++){const p=generatePracticePuzzle('All',recent,rng);expect(p.difficulty).not.toBe('Easy');expect(recent).not.toContain(p.id);recent=[...recent,p.id]}});

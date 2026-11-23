@@ -175,7 +175,8 @@ function deriveTerms(puzzle: DailyPuzzle): number[] {
 function checkPuzzle(puzzle: DailyPuzzle) {
   if (puzzle.visualPattern) {
     expect(puzzle.visualPattern.cells).toHaveLength((puzzle.visualPattern.rows ?? 3) * (puzzle.visualPattern.columns ?? 3));
-    expect(puzzle.visualPattern.cells[puzzle.visualPattern.missingIndex ?? 8]).toBeNull();
+    if (puzzle.visualPattern.taskFormat === 'find-odd-tile') expect(puzzle.visualPattern.cells.every((cell) => cell !== null)).toBe(true);
+    else expect(puzzle.visualPattern.cells[puzzle.visualPattern.missingIndex ?? 8]).toBeNull();
     expect(puzzle.visualPattern.choices).toHaveLength(8);
     expect(new Set(puzzle.visualPattern.choices.map((choice) => JSON.stringify(choice))).size).toBe(8);
     expect(puzzle.visualPattern.choices[puzzle.visualPattern.answerIndex]).toBeDefined();
@@ -243,9 +244,9 @@ describe('generated Daily Challenge', () => {
       expect(lineup, 'no lineup for preview day ' + day).not.toBeNull();
       expect(lineup).toHaveLength(5);
       expect(lineup!.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
-      expect(lineup!.at(-1)?.visualPattern).toBeDefined();
-      expect(lineup!.at(-1)?.visualPattern?.rows).not.toBe(2);
-      expect(lineup!.at(-1)?.visualPattern?.columns).not.toBe(2);
+      expect([lineup![3].visualPattern, lineup![4].visualPattern].filter(Boolean)).toHaveLength(1);
+      const shapePuzzle = lineup![3].visualPattern ?? lineup![4].visualPattern;
+      expect(shapePuzzle).toBeDefined();
     }
   });
 
