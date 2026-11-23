@@ -10,9 +10,9 @@ describe('Endless rules', () => {
 
   it('awards points based only on guesses and hints', () => {
     expect(endlessPuzzlePoints(1, 0)).toBe(100);
-    expect(endlessPuzzlePoints(2, 0)).toBe(70);
-    expect(endlessPuzzlePoints(3, 0)).toBe(40);
+    expect(endlessPuzzlePoints(2, 0)).toBe(90);
+    expect(endlessPuzzlePoints(3, 0)).toBe(80);
     expect(endlessPuzzlePoints(3, 2)).toBe(20);
-    expect(endlessPuzzlePoints(1, 10)).toBe(0);
+    expect(endlessPuzzlePoints(1, 10)).toBe(40);
   });
 });

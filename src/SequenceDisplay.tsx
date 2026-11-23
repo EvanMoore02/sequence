@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { Puzzle, VisualShape } from './types';
 import { missingTermIndices } from './engine/missingTerms';
 
@@ -46,7 +46,7 @@ function TileImage({ tile }: { tile: VisualShape[] }) {
 function describeTile(tile: VisualShape[]): string {
   if(tile.length===0)return 'empty tile';
   const positions=['top-left','top-right','bottom-left','bottom-right'];
-  return tile.map((shape)=>[shape.count&&shape.count>1?shape.count+' copies of':undefined,shape.fill,shapeNames[shape.kind],shape.inside?'containing a smaller '+shapeNames[shape.inside]:undefined,shape.rotation?shape.rotation+' degrees clockwise':undefined,shape.slot===undefined?undefined:'in the '+positions[shape.slot]].filter(Boolean).join(' ')).join(' and ');
+  return tile.map((shape)=>[shape.count&&shape.count>1?shape.count+' copies of':undefined,shape.fill,shapeNames[shape.kind],shape.inside?'containing a smaller '+shapeNames[shape.inside]:undefined,shape.rotation?shape.rotation+' degrees clockwise':'upright',shape.slot===undefined?undefined:'in the '+positions[shape.slot]].filter(Boolean).join(' ')).join(' and ');
 }
 
 export default function SequenceDisplay({
@@ -59,6 +59,7 @@ export default function SequenceDisplay({
   solved?: boolean;
 }) {
   const [selectedVisualOption, setSelectedVisualOption] = useState<number | null>(null);
+  const visualInstructionId = useId();
   useEffect(() => setSelectedVisualOption(null), [puzzle.id]);
   if (puzzle.letterPattern) {
     const terms = [...puzzle.letterPattern.sequence, puzzle.letterPattern.answer];
@@ -72,11 +73,28 @@ export default function SequenceDisplay({
   }
   if (puzzle.visualPattern) {
     const visual = puzzle.visualPattern;
+    const rowCount = visual.rows ?? 3;
+    const columnCount = visual.columns ?? 3;
+    const matrixLabel = visual.taskFormat === 'analogy'
+      ? 'Visual analogy'
+      : visual.taskFormat === 'find-odd-tile'
+        ? 'Shape pattern with one tile that breaks the rule'
+        : 'Shape pattern';
+    const selectedLabel = selectedVisualOption === null
+      ? ''
+      : 'Option ' + String.fromCharCode(65 + selectedVisualOption) + ' selected. Activate Submit answer to check it.';
     return <div className="shape-question visual-question">
-      <p className="visual-instruction">{visual.taskFormat==='analogy'?'Choose the figure that completes the analogy.':visual.taskFormat==='find-odd-tile'?'Choose the tile that breaks the pattern.':'Choose the figure that completes the pattern.'}</p>
-      <div className="visual-matrix" role="grid" aria-label={visual.taskFormat==='analogy'?'Visual analogy':'Shape reasoning matrix'} style={{gridTemplateColumns:'repeat('+(visual.columns??3)+',minmax(58px,1fr))'}}>
-        {visual.cells.map((tile, index) => <div className={'visual-cell' + (!tile ? (revealed ? ' visual-answer-cell '+(solved?'solved':'missed') : ' unknown') : '') + (visual.taskFormat==='find-odd-tile'&&revealed&&index===visual.missingIndex?' visual-answer-cell '+(solved?'solved':'missed'):'')} role="gridcell" key={index} aria-label={tile?'Row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)+': '+describeTile(tile):revealed?'Row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)+': '+describeTile(visual.choices[visual.answerIndex]):'Missing cell, row '+(Math.floor(index/(visual.columns??3))+1)+', column '+(index%(visual.columns??3)+1)}>
-          {tile ? <TileImage tile={tile} /> : revealed ? <TileImage tile={visual.choices[visual.answerIndex]} /> : <span className="visual-missing-mark" aria-hidden="true">?</span>}
+      <p className="visual-instruction" id={visualInstructionId}>{visual.taskFormat==='analogy'?'Choose the figure that completes the analogy.':visual.taskFormat==='find-odd-tile'?'Choose the tile that breaks the pattern.':'Choose the figure that completes the pattern.'}</p>
+      <div className="visual-matrix" role="table" aria-label={matrixLabel} aria-describedby={visualInstructionId} aria-rowcount={rowCount} aria-colcount={columnCount}>
+        {Array.from({length:rowCount},(_,row)=><div className="visual-row" role="row" key={row} style={{gridTemplateColumns:'repeat('+columnCount+',minmax(0,1fr))'}}>
+          {Array.from({length:columnCount},(_,column)=>{
+            const index=row*columnCount+column,tile=visual.cells[index],isOddAnswer=visual.taskFormat==='find-odd-tile'&&revealed&&index===visual.missingIndex;
+            const cellLabel=tile?'Row '+(row+1)+', column '+(column+1)+': '+describeTile(tile)+(isOddAnswer?', odd tile':''):revealed?'Row '+(row+1)+', column '+(column+1)+': '+describeTile(visual.choices[visual.answerIndex]):'Missing cell, row '+(row+1)+', column '+(column+1);
+            const answerClass=(!tile||isOddAnswer)?' visual-answer-cell '+(solved?'solved':'missed'):'';
+            return <div className={'visual-cell'+(!tile?(revealed?' '+answerClass:' unknown'):isOddAnswer?' '+answerClass:'')} role="cell" key={column} aria-label={cellLabel}>
+              {tile ? <TileImage tile={tile} /> : revealed ? <TileImage tile={visual.choices[visual.answerIndex]} /> : <span className="visual-missing-mark" aria-hidden="true">?</span>}
+            </div>;
+          })}
         </div>)}
       </div>
       <div className="visual-options" role="group" aria-label={visual.taskFormat==='analogy'?'Choose the answer to the analogy':visual.taskFormat==='find-odd-tile'?'Choose the tile that breaks the pattern':'Choose the missing figure'}>
@@ -87,8 +105,9 @@ export default function SequenceDisplay({
           const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
           setter?.call(input, String(index));
           input.dispatchEvent(new Event('input', { bubbles: true }));
-        }}><span className="visual-option-label">{String.fromCharCode(65 + index)}</span><span className="visual-option-frame"><TileImage tile={tile} /></span></button>)}
+        }}><span className="visual-option-label" aria-hidden="true">{String.fromCharCode(65 + index)}</span><span className="visual-option-frame"><TileImage tile={tile} /></span></button>)}
       </div>
+      {selectedVisualOption!==null&&<p className="visual-selection-status" role="status" aria-live="polite" aria-atomic="true">{selectedLabel}</p>}
     </div>;
   }
 

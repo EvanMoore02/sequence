@@ -8,6 +8,40 @@ async function openFreshGame(page: Page) {
   if (await guide.isVisible().catch(() => false)) await guide.getByRole('button', { name: /got it/i }).click();
 }
 
+async function openVisualPractice(page: Page, taskFormat: 'complete-matrix' | 'analogy' | 'find-odd-tile') {
+  await openFreshGame(page);
+  const optionIndex = await page.evaluate(async (wantedFormat) => {
+    const { templates } = await import('/src/engine/generator.ts');
+    const visual = templates.find((template) => template.id === 'visual-matrix');
+    if (!visual) throw new Error('Visual puzzle template is unavailable');
+    function rngFrom(seed: number) {
+      let state = seed >>> 0;
+      return () => {
+        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+        return state / 4294967296;
+      };
+    }
+    let puzzle: ReturnType<typeof visual.generate> | undefined;
+    for (let seed = 1; seed <= 2048; seed += 1) {
+      const candidate = visual.generate(rngFrom(seed * 104729));
+      if (candidate.visualPattern?.taskFormat === wantedFormat) {
+        puzzle = candidate;
+        break;
+      }
+    }
+    if (!puzzle?.visualPattern) throw new Error('Could not generate a ' + wantedFormat + ' puzzle');
+    localStorage.setItem('sequence.practice.v1', JSON.stringify({
+      difficulty: 'Hard', category: 'Visual reasoning', puzzle, recent: [],
+      attempts: 0, hintLevel: 0, input: '', solved: false, skipped: false,
+      adjustment: 0, rated: false,
+    }));
+    return puzzle.visualPattern.answerIndex;
+  }, taskFormat);
+  await page.getByRole('button', { name: /practice/i }).click();
+  await expect(page.locator('.practice-prompt .visual-question')).toBeVisible();
+  return optionIndex;
+}
+
 async function getTodayAnswers(page: Page) {
   return page.evaluate(async () => {
     const now = new Date();
@@ -18,7 +52,7 @@ async function getTodayAnswers(page: Page) {
     ]);
     const puzzles = dailyPuzzles(date);
     if (!puzzles) throw new Error(`Daily puzzles unavailable for ${date}`);
-    return puzzles.map((puzzle) => ({ answers: missingTerms(puzzle), difficulty: puzzle.difficulty }));
+    return puzzles.map((puzzle) => ({ answers: missingTerms(puzzle), difficulty: puzzle.difficulty, isLetter: Boolean(puzzle.letterPattern) }));
   });
 }
 
@@ -35,6 +69,7 @@ async function submitDailyAnswer(page: Page, numericAnswers?: number[]) {
     if (!puzzle) throw new Error('Current Daily puzzle is unavailable');
     return {
       visualOption: puzzle.visualPattern ? String.fromCharCode(65 + puzzle.visualPattern.answerIndex) : null,
+      letterAnswer: puzzle.letterPattern?.answer ?? null,
       answers: missingTerms(puzzle),
     };
   });
@@ -42,7 +77,7 @@ async function submitDailyAnswer(page: Page, numericAnswers?: number[]) {
   if (current.visualOption) {
     await page.getByRole('button', { name: new RegExp('^Option ' + current.visualOption + ':') }).click();
   } else {
-    await page.getByLabel('Your answer').fill((numericAnswers ?? current.answers).join(', '));
+    await page.getByLabel('Your answer').fill(current.letterAnswer ?? (numericAnswers ?? current.answers).join(', '));
   }
   await page.getByRole('button', { name: /submit answer/i }).click();
 }
@@ -53,7 +88,7 @@ test('first visit shows the guide and Help can reopen it', async ({ page }) => {
   await page.reload();
   const guide = page.getByRole('dialog', { name: 'How to play' });
   await expect(guide).toBeVisible();
-  await expect(guide).toContainText('Skipping a Daily puzzle gives 0 points');
+  await expect(guide).toContainText('skipping gives 0');
   await guide.getByRole('button', { name: /got it/i }).click();
   await page.getByRole('button', { name: 'How to play' }).click();
   await expect(guide).toBeVisible();
@@ -63,12 +98,14 @@ test('Daily skip gives zero points and continues through the challenge', async (
   await openFreshGame(page);
   await page.getByRole('button', { name: /play today.s challenge/i }).click();
   await page.getByRole('button', { name: /skip puzzle.*0 points/i }).click();
+  await page.getByRole('dialog', { name: 'Skip this puzzle?' }).getByRole('button', { name: 'Skip puzzle' }).click();
   await expect(page.getByRole('dialog')).toContainText('0 pts');
   await page.getByRole('button', { name: /next puzzle/i }).click();
   for (let index = 1; index < 5; index += 1) {
     await submitDailyAnswer(page);
     if (index < 4) await page.getByRole('button', { name: /next puzzle/i }).click();
   }
+  await page.getByRole('button', { name: 'View results' }).click();
   await expect(page.getByText('DAILY CHALLENGE COMPLETE')).toBeVisible();
   await expect(page.locator('.resultrow').first()).toContainText('0 pts');
   await expect(page.locator('.score')).not.toHaveText('500 / 500');
@@ -83,9 +120,13 @@ test('Daily Challenge resumes, follows the difficulty order, and shows results',
   await expect(page.locator('.difficulty')).toHaveCount(0);
 
   // Make one incorrect attempt, reload, and confirm the saved run resumes in place.
-  const wrongAnswers = [...puzzles[0].answers];
-  wrongAnswers[0] += 1;
-  await page.getByLabel('Your answer').fill(wrongAnswers.join(', '));
+  if (puzzles[0].isLetter) {
+    await page.getByLabel('Your answer').fill(puzzles[0].answers[0] === 'Z' ? 'A' : 'Z');
+  } else {
+    const wrongAnswers = [...puzzles[0].answers] as number[];
+    wrongAnswers[0] += 1;
+    await page.getByLabel('Your answer').fill(wrongAnswers.join(', '));
+  }
   await page.getByRole('button', { name: /submit answer/i }).click();
   await expect(page.getByRole('status')).toContainText('Not quite');
   await expect(page.locator('.attempts .spent')).toHaveCount(1);
@@ -103,9 +144,10 @@ test('Daily Challenge resumes, follows the difficulty order, and shows results',
     }
   }
 
+  await page.getByRole('button', { name: 'View results' }).click();
   await expect(page.getByText('DAILY CHALLENGE COMPLETE')).toBeVisible();
   await expect(page.locator('.resultrow')).toHaveCount(5);
-  await expect(page.getByText('5/5')).toBeVisible();
+  await expect(page.getByText('5/5', { exact: true })).toBeVisible();
   const rowTotal = await page.locator('.resultrow > strong').evaluateAll((nodes) =>
     nodes.reduce((total, node) => total + Number(node.textContent?.replace(/[^0-9]/g, '')), 0),
   );
@@ -120,6 +162,8 @@ test('skipping the fifth Daily puzzle completes the challenge for 0 points', asy
     await page.getByRole('button', { name: /next puzzle/i }).click();
   }
   await page.getByRole('button', { name: /skip puzzle.*0 points/i }).click();
+  await page.getByRole('dialog', { name: 'Skip this puzzle?' }).getByRole('button', { name: 'Skip puzzle' }).click();
+  await page.getByRole('button', { name: 'View results' }).click();
   await expect(page.getByText('DAILY CHALLENGE COMPLETE')).toBeVisible();
   await expect(page.locator('.resultrow').last()).toContainText('0 pts');
 });
@@ -146,6 +190,7 @@ test('Practice skip reveals the answer and advances without touching Daily stats
   await openFreshGame(page);
   await page.getByRole('button', { name: /practice/i }).click();
   await page.getByRole('button', { name: /^Easy\b/ }).click();
+  await page.getByRole('button', { name: 'All categories' }).click();
   const dailyBefore = await page.evaluate(() => localStorage.getItem('sequence.prototype.v1'));
   await page.getByRole('button', { name: 'Skip puzzle' }).click();
   await expect(page.getByRole('dialog')).toContainText('Puzzle skipped');
@@ -158,6 +203,7 @@ test('Hard Practice hides and accepts the next number', async ({ page }) => {
   await openFreshGame(page);
   await page.getByRole('button', { name: /practice/i }).click();
   await page.getByRole('button', { name: /^Hard\b/ }).click();
+  await page.getByRole('button', { name: 'All categories' }).click();
 
   const answers = await page.evaluate(async () => {
     const saved = JSON.parse(localStorage.getItem('sequence.practice.v1') || 'null');
@@ -194,3 +240,38 @@ test('Endless can be solved and advanced with the Next puzzle action', async ({ 
   await nextPuzzle.click();
   await expect(page.getByRole('heading', { name: 'Puzzle 2' })).toBeVisible();
 });
+
+for (const scenario of [
+  { taskFormat: 'complete-matrix', name: 'missing tile', rowCount: 3, cellCount: 9 },
+  { taskFormat: 'analogy', name: 'analogy', rowCount: 2, cellCount: 4 },
+  { taskFormat: 'find-odd-tile', name: 'odd tile out', rowCount: 3, cellCount: 9 },
+] as const) {
+  test('visual ' + scenario.name + ' works with screen readers, mobile layout, and keyboard', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    const answerIndex = await openVisualPractice(page, scenario.taskFormat);
+    const matrix = page.getByRole('table', { name: scenario.taskFormat === 'analogy' ? 'Visual analogy' : scenario.taskFormat === 'find-odd-tile' ? 'Shape pattern with one tile that breaks the rule' : 'Shape pattern' });
+    await expect(matrix).toBeVisible();
+    await expect(matrix.getByRole('row')).toHaveCount(scenario.rowCount);
+    await expect(matrix.getByRole('cell')).toHaveCount(scenario.cellCount);
+    await expect(page.getByText(scenario.taskFormat === 'analogy' ? /completes the analogy/ : scenario.taskFormat === 'find-odd-tile' ? /tile that breaks the pattern/ : /completes the pattern/)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+    const options = page.getByRole('group', { name: scenario.taskFormat === 'analogy' ? 'Choose the answer to the analogy' : scenario.taskFormat === 'find-odd-tile' ? 'Choose the tile that breaks the pattern' : 'Choose the missing figure' }).getByRole('button');
+    await expect(options).toHaveCount(8);
+    const answer = options.nth(answerIndex);
+    await options.first().focus();
+    for (let index = 0; index < 8; index += 1) {
+      await expect(options.nth(index)).toBeFocused();
+      if (index === answerIndex) await page.keyboard.press('Enter');
+      if (index < 7) await page.keyboard.press('Tab');
+    }
+    await expect(answer).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('status')).toContainText('selected. Activate Submit answer');
+
+    await page.keyboard.press('Tab');
+    const submit = page.getByRole('button', { name: /^Submit\b/ });
+    await expect(submit).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog')).toContainText('Nice job!');
+  });
+}

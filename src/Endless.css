@@ -62,3 +62,12 @@ body:has(.game .visual-question) .game .answer-label,body:has(.game .visual-ques
 :root[data-theme=dark] .visual-options button.incorrect-option{border-color:#b47d6d;background:#422d29;color:#f0c5b7}
 @media(max-width:390px){.visual-matrix{gap:5px;padding:8px;border-radius:14px}.visual-cell{border-radius:9px}.visual-options{gap:6px}.visual-options button{min-height:66px}.visual-options button>.visual-option-frame{width:42px;height:42px}.visual-options button .visual-option-frame .visual-token.solo .visual-shape{width:25px;height:25px}.shape-sequence{gap:6px}.shape-sequence b.tile{width:calc((100vw - 82px)/6);min-width:39px}.shape-choices{gap:7px}}
 @media(prefers-reduced-motion:reduce){.visual-cell,.visual-options button,.shape-choices>button{transition:none!important}}
+.visual-matrix{display:flex;flex-direction:column;gap:8px;width:min(100%,360px)}
+.visual-row{display:grid;gap:8px;min-width:0}
+.visual-instruction{max-width:42ch;font-size:13px;line-height:1.45}
+.visual-options{width:min(100%,390px)}
+.visual-options button{min-width:44px;min-height:64px;touch-action:manipulation}
+.visual-options button:focus-visible{outline:3px solid #315e37;outline-offset:3px;z-index:3}
+.visual-selection-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:520px){.visual-question{width:100%;max-width:100%}.visual-matrix{width:min(100%,360px);padding:10px}.visual-options{width:100%;grid-template-columns:repeat(4,minmax(44px,1fr));gap:7px}.visual-options button{min-height:64px;padding:4px}.visual-options button>.visual-option-frame{width:min(48px,100%);height:auto;aspect-ratio:1}.visual-options button .visual-option-frame .visual-token.solo .visual-shape{width:30px;height:30px}.visual-row,.visual-matrix{gap:6px}}
+@media(max-width:350px){.visual-options{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.visual-options button{min-height:58px}.visual-options button>.visual-option-frame{width:40px;height:40px}.visual-options button .visual-option-frame .visual-token.solo .visual-shape{width:25px;height:25px}}
