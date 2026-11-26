@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import bank from '../data/puzzles.json';
 import type { AuthoredPuzzle } from '../data/puzzleTypes';
-import { rateDifficulty } from './difficulty';
+import { rateDifficulty, rateVisualDifficulty } from './difficulty';
 
 const authored = (bank as unknown as { puzzles: AuthoredPuzzle[] }).puzzles;
 
@@ -25,5 +25,11 @@ describe('difficulty rating', () => {
 
     const squares = rateDifficulty([1, 4, 9, 16, 25], 36, { type: 'increasing-difference', firstDifference: 3, growth: 2 });
     expect(squares.score).toBeGreaterThan(4);
+  });
+
+  it('rates visual puzzle families across the daily difficulty range', () => {
+    expect(rateVisualDifficulty('odd-tile-out').difficulty).toBe('Medium');
+    expect(rateVisualDifficulty('analogy-transform').difficulty).toBe('Hard');
+    expect(rateVisualDifficulty('shape-xor').difficulty).toBe('Expert');
   });
 });

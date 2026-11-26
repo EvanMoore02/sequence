@@ -3,12 +3,14 @@ import { puzzles as authoredPuzzles } from '../data/puzzles';
 import type { Puzzle } from '../types';
 import type { AnswerPattern } from '../data/puzzleTypes';
 import { templates, type GeneratedPuzzle } from './generator';
+import { rateDifficulty } from './difficulty';
 import { makeDailyLetterPuzzles } from './letterPuzzles';
 
 const levels: Puzzle['difficulty'][] = ['Easy', 'Medium', 'Hard', 'Expert'];
 const dailyAnchor = Date.UTC(2026, 10, 2);
 const millisecondsPerDay = 86_400_000;
 const cooldownDays = 15;
+const newSelectorStartDate = '2026-11-26';
 const samplesPerTemplate = 160;
 const minimumCandidateCount: Partial<Record<Puzzle['difficulty'], number>> = { Medium: 16, Hard: 32, Expert: 32 };
 const cache = new Map<string, DailyPuzzle[] | null>();
@@ -16,8 +18,10 @@ const lineupCache = new Map<number, DailyPuzzle[] | null>();
 type DailyLetterPuzzle = Puzzle & { pattern: AnswerPattern; letterPattern: NonNullable<Puzzle['letterPattern']> };
 type DailyPuzzle = AuthoredPuzzle | GeneratedPuzzle | DailyLetterPuzzle;
 type Pools = Record<Puzzle['difficulty'], DailyPuzzle[]>;
-let pools: Pools | undefined;
+let legacyPools: Pools | undefined;
+let diversePools: Pools | undefined;
 const groupedPoolCache = new WeakMap<DailyPuzzle[], Map<string, DailyPuzzle[]>>();
+const groupedFamilyPoolCache = new WeakMap<DailyPuzzle[], Map<string, DailyPuzzle[]>>();
 
 function groupedByRule(pool: DailyPuzzle[]): Map<string, DailyPuzzle[]> {
   const cached = groupedPoolCache.get(pool);
@@ -60,6 +64,28 @@ function dailyRuleKey(puzzle: DailyPuzzle): string {
   return puzzle.visualPattern ? 'visual:' + (puzzle.visualPattern.family ?? 'matrix') : puzzle.pattern.type;
 }
 
+// Family keys ignore numeric parameters so 2-step and 3-step variants still
+// count as the same underlying reasoning pattern.
+function patternFamilyKey(puzzle: DailyPuzzle): string {
+  if (puzzle.letterPattern) return 'letter:' + puzzle.letterPattern.family;
+  if (puzzle.visualPattern) return 'visual:' + (puzzle.visualPattern.family ?? 'matrix') + ':' + (puzzle.visualPattern.taskFormat ?? 'complete-matrix');
+  return 'number:' + puzzle.pattern.type;
+}
+
+function groupedByFamily(pool: DailyPuzzle[]): Map<string, DailyPuzzle[]> {
+  const cached = groupedFamilyPoolCache.get(pool);
+  if (cached) return cached;
+  const groups = new Map<string, DailyPuzzle[]>();
+  for (const puzzle of pool) {
+    const key = patternFamilyKey(puzzle);
+    const group = groups.get(key) ?? [];
+    group.push(puzzle);
+    groups.set(key, group);
+  }
+  groupedFamilyPoolCache.set(pool, groups);
+  return groups;
+}
+
 function hash(value: string): number {
   let result = 2166136261;
   for (const character of value) result = Math.imul(result ^ character.charCodeAt(0), 16777619);
@@ -74,7 +100,13 @@ function randomFromSeed(seed: number): () => number {
   };
 }
 
-function makePools(): Pools {
+function asLegacyPuzzle(puzzle: DailyPuzzle): DailyPuzzle {
+  if (puzzle.visualPattern) return { ...puzzle, difficulty: 'Expert', difficultyScore: rateDifficulty(puzzle.sequence, puzzle.answer, puzzle.pattern).score };
+  if (puzzle.letterPattern) return { ...puzzle, difficulty: 'Medium' };
+  return puzzle;
+}
+
+function makePools(legacy = false): Pools {
   const collected: Record<Puzzle['difficulty'], Map<string, DailyPuzzle>> = {
     Easy: new Map(), Medium: new Map(), Hard: new Map(), Expert: new Map(),
   };
@@ -88,12 +120,26 @@ function makePools(): Pools {
 
   authoredPuzzles.forEach(add);
   for (const [index, puzzle] of makeDailyLetterPuzzles().entries()) {
-    add({ ...puzzle, sequence: [index], pattern: { type: 'visual-matrix', shapeStep: 1, fillByRow: false, rotationByColumn: false } } as DailyLetterPuzzle);
+    const candidate = { ...puzzle, sequence: [index], pattern: { type: 'visual-matrix', shapeStep: 1, fillByRow: false, rotationByColumn: false } } as DailyLetterPuzzle;
+    add(legacy ? asLegacyPuzzle(candidate) : candidate);
   }
   for (const template of templates) {
     const sampleCount = template.id === 'alternating-operations' ? samplesPerTemplate / 4 : samplesPerTemplate;
     for (let attempt = 0; attempt < sampleCount; attempt += 1) {
-      add(template.generate(randomFromSeed(hash(template.id + ':' + attempt))));
+      const candidate = template.generate(randomFromSeed(hash(template.id + ':' + attempt)));
+      add(legacy ? asLegacyPuzzle(candidate) : candidate);
+    }
+  }
+
+  // Each visual difficulty tier needs enough distinct puzzles to satisfy the
+  // daily slot and exact-puzzle cooldown constraints after the cutover.
+  const shapeTemplate = templates.find((template) => template.id === 'visual-matrix')!;
+  if (!legacy) {
+    for (const level of ['Medium', 'Hard', 'Expert'] as const) {
+      const visualCount = () => [...collected[level].values()].filter(isShapePuzzle).length;
+      for (let attempt = 0; visualCount() < 32 && attempt < 2048; attempt += 1) {
+        add(shapeTemplate.generate(randomFromSeed(hash('shape-tier:' + level + ':' + attempt))));
+      }
     }
   }
 
@@ -103,22 +149,24 @@ function makePools(): Pools {
     const target = minimumCandidateCount[level]!;
     for (let attempt = 0; collected[level].size < target && attempt < 512; attempt += 1) {
       const template = templates[attempt % templates.length];
-      add(template.generate(randomFromSeed(hash('pool-fill:' + level + ':' + attempt + ':' + template.id))));
+      const candidate = template.generate(randomFromSeed(hash('pool-fill:' + level + ':' + attempt + ':' + template.id)));
+      add(legacy ? asLegacyPuzzle(candidate) : candidate);
     }
   }
 
   // The Expert slots need one non-shape option and one shape option every day.
   // Keep separate reserves so neither kind can consume the other's cooldown pool.
-  const shapeTemplate = templates.find((template) => template.id === 'visual-matrix')!;
   const shapeCount = () => [...collected.Expert.values()].filter(isShapePuzzle).length;
   const expertNonShapeCount = () => [...collected.Expert.values()].filter((puzzle) => !isShapePuzzle(puzzle)).length;
   for (let attempt = 0; shapeCount() < 32 && attempt < 512; attempt += 1) {
-    add(shapeTemplate.generate(randomFromSeed(hash('shape-reserve:' + attempt))));
+    const candidate = shapeTemplate.generate(randomFromSeed(hash('shape-reserve:' + attempt)));
+    add(legacy ? asLegacyPuzzle(candidate) : candidate);
   }
   const nonShapeTemplates = templates.filter((template) => template.id !== 'visual-matrix');
   for (let attempt = 0; expertNonShapeCount() < 32 && attempt < 1024; attempt += 1) {
     const template = nonShapeTemplates[attempt % nonShapeTemplates.length];
-    add(template.generate(randomFromSeed(hash('expert-reserve:' + attempt + ':' + template.id))));
+    const candidate = template.generate(randomFromSeed(hash('expert-reserve:' + attempt + ':' + template.id)));
+    add(legacy ? asLegacyPuzzle(candidate) : candidate);
   }
 
   return Object.fromEntries(levels.map((level) => [
@@ -224,7 +272,96 @@ function selectLineup(dayOffset: number, available: Pools, previous: DailyPuzzle
   return selected;
 }
 
-function selectWithHistory(day: number, available: Pools, adjacent: DailyPuzzle[] = []): DailyPuzzle[] {
+function selectDiverseLineup(dayOffset: number, available: Pools, history: DailyPuzzle[], blockedSignatures: Set<string>, previous: DailyPuzzle[]): DailyPuzzle[] {
+  const recentFamilyCounts = new Map<string, number>();
+  for (const puzzle of history) {
+    const family = patternFamilyKey(puzzle);
+    recentFamilyCounts.set(family, (recentFamilyCounts.get(family) ?? 0) + 1);
+  }
+  const requireLetter = positiveModulo(dayOffset, 3) === 2;
+  const daysSinceCutover = dayOffset - dayIndex(newSelectorStartDate);
+  const targetVisualSlot = positiveModulo(daysSinceCutover, lineupOrder.length);
+  // This cycle spreads letters across all five slots without colliding with
+  // the visual slot on any every-third-day challenge.
+  const letterSlotCycle = [0, 1, 4, 2, 3] as const;
+  const targetLetterSlot = requireLetter
+    ? letterSlotCycle[positiveModulo(Math.floor(daysSinceCutover / 3), letterSlotCycle.length)]
+    : -1;
+  const previousRuleTypes = new Set(previous.filter((puzzle) => !isShapePuzzle(puzzle) && !puzzle.letterPattern).map((puzzle) => puzzle.pattern.type));
+  const selected: DailyPuzzle[] = [];
+  const usedFamilies = new Set<string>();
+  const usedCategoryCounts = new Map<string, number>();
+  const usedSignatures = new Set(blockedSignatures);
+
+  function search(slot: number, visualCount: number, letterCount: number): boolean {
+    if (slot === lineupOrder.length) return visualCount === 1 && letterCount === (requireLetter ? 1 : 0);
+    const pool = available[lineupOrder[slot]];
+    const grouped = groupedByFamily(pool);
+    const familyKeys = [...grouped.keys()].filter((family) => !usedFamilies.has(family)).sort((left, right) =>
+      (recentFamilyCounts.get(left) ?? 0) - (recentFamilyCounts.get(right) ?? 0)
+      || hash(dayOffset + ':' + slot + ':' + left) - hash(dayOffset + ':' + slot + ':' + right)
+      || left.localeCompare(right));
+
+    for (const family of familyKeys) {
+      const candidates = grouped.get(family)!
+        .filter((candidate) => {
+          const visual = isShapePuzzle(candidate);
+          const letter = Boolean(candidate.letterPattern);
+          return !usedSignatures.has(signature(candidate))
+            && (visual === (slot === targetVisualSlot))
+            && (letter === (slot === targetLetterSlot))
+            && (visual || letter || !previousRuleTypes.has(candidate.pattern.type));
+        });
+      const variantStart = candidates.length ? positiveModulo(hash(dayOffset + ':' + slot + ':' + family), candidates.length) : 0;
+
+      for (let categoryPass = 0; categoryPass < 2; categoryPass += 1) for (let step = 0; step < candidates.length; step += 1) {
+        const candidate = candidates[(variantStart + step) % candidates.length];
+        if (categoryPass === 0 && usedCategoryCounts.has(candidate.category)) continue;
+        const visual = isShapePuzzle(candidate);
+        const letter = Boolean(candidate.letterPattern);
+        const puzzleSignature = signature(candidate);
+        selected.push(candidate);
+        usedFamilies.add(family);
+        usedCategoryCounts.set(candidate.category, (usedCategoryCounts.get(candidate.category) ?? 0) + 1);
+        usedSignatures.add(puzzleSignature);
+        if (search(slot + 1, visualCount + Number(visual), letterCount + Number(letter))) return true;
+        selected.pop();
+        usedFamilies.delete(family);
+        const categoryCount = usedCategoryCounts.get(candidate.category)! - 1;
+        if (categoryCount === 0) usedCategoryCounts.delete(candidate.category);
+        else usedCategoryCounts.set(candidate.category, categoryCount);
+        usedSignatures.delete(puzzleSignature);
+      }
+    }
+    return false;
+  }
+
+  if (!search(0, 0, 0)) {
+    throw new Error('The Daily Challenge candidate pool cannot satisfy its difficulty, visual, letter, cooldown, and unique-family requirements.');
+  }
+  return selected;
+}
+
+function selectDiverseWithHistory(day: number, available: Pools): DailyPuzzle[] {
+  const recentHistory: DailyPuzzle[] = [];
+  const blockedSignatures = new Set<string>();
+  for (let priorDay = day - cooldownDays; priorDay < day; priorDay += 1) {
+    const lineup = lineupCache.get(priorDay);
+    if (!lineup) continue;
+    recentHistory.push(...lineup);
+    if (isWithinDailyCooldown(priorDay, day)) for (const puzzle of lineup) blockedSignatures.add(signature(puzzle));
+  }
+  return selectDiverseLineup(day, available, recentHistory, blockedSignatures, lineupCache.get(day - 1) ?? []);
+}
+
+function poolsForDay(day: number): Pools {
+  if (day >= dayIndex(newSelectorStartDate)) return diversePools ?? (diversePools = makePools());
+  return legacyPools ?? (legacyPools = makePools(true));
+}
+
+function selectWithHistory(day: number, adjacent: DailyPuzzle[] = []): DailyPuzzle[] {
+  const available = poolsForDay(day);
+  if (day >= dayIndex(newSelectorStartDate)) return selectDiverseWithHistory(day, available);
   const recent: DailyPuzzle[] = [];
   for (let cachedDay = day - cooldownDays + 1; cachedDay < day + cooldownDays; cachedDay += 1) {
     if (!isWithinDailyCooldown(cachedDay, day) || cachedDay === day) continue;
@@ -234,24 +371,25 @@ function selectWithHistory(day: number, available: Pools, adjacent: DailyPuzzle[
   return selectLineup(day, available, adjacent, recent);
 }
 
-function ensureAnchorHistory(available: Pools): void {
+function ensureAnchorHistory(): void {
   if (lineupCache.has(-1)) return;
+  const available = poolsForDay(-1);
   lineupCache.set(-1, selectLineup(-1, available));
   for (let day = -2; day >= -(cooldownDays - 1); day -= 1) {
-    lineupCache.set(day, selectWithHistory(day, available, lineupCache.get(day + 1) ?? []));
+    lineupCache.set(day, selectWithHistory(day, lineupCache.get(day + 1) ?? []));
   }
 }
 
-function lineupForOffset(offset: number, available: Pools): DailyPuzzle[] {
+function lineupForOffset(offset: number): DailyPuzzle[] {
   if (lineupCache.has(offset)) return lineupCache.get(offset)!;
-  ensureAnchorHistory(available);
+  ensureAnchorHistory();
   if (offset >= 0) {
     for (let day = 0; day <= offset; day += 1) {
-      if (!lineupCache.has(day)) lineupCache.set(day, selectWithHistory(day, available, lineupCache.get(day - 1) ?? []));
+      if (!lineupCache.has(day)) lineupCache.set(day, selectWithHistory(day, lineupCache.get(day - 1) ?? []));
     }
   } else {
     for (let day = -cooldownDays; day >= offset; day -= 1) {
-      if (!lineupCache.has(day)) lineupCache.set(day, selectWithHistory(day, available, lineupCache.get(day + 1) ?? []));
+      if (!lineupCache.has(day)) lineupCache.set(day, selectWithHistory(day, lineupCache.get(day + 1) ?? []));
     }
   }
   return lineupCache.get(offset)!;
@@ -260,8 +398,7 @@ function lineupForOffset(offset: number, available: Pools): DailyPuzzle[] {
 export function dailyPuzzles(date: string): DailyPuzzle[] | null {
   if (cache.has(date)) return cache.get(date) ?? null;
   const offset = dayIndex(date);
-  const available = pools ?? (pools = makePools());
-  const selected = lineupForOffset(offset, available);
+  const selected = lineupForOffset(offset);
   cache.set(date, selected);
   return selected;
 }
@@ -272,13 +409,14 @@ export function dailyIds(date: string): string[] | null {
 
 export function hasDailyComposition(ids: string[]): boolean {
   if (ids.length !== 5) return false;
-  const available = pools ?? (pools = makePools());
-  const byId = new Map(levels.flatMap((level) => available[level]).map((puzzle) => [puzzle.id, puzzle]));
+  const legacy = legacyPools ?? (legacyPools = makePools(true));
+  const diverse = diversePools ?? (diversePools = makePools());
+  const byId = new Map([...levels.flatMap((level) => legacy[level]), ...levels.flatMap((level) => diverse[level])].map((puzzle) => [puzzle.id, puzzle]));
   const puzzlesForIds = ids.map((id) => byId.get(id));
   if (puzzlesForIds.some((puzzle) => !puzzle)) return false;
   const hasRequiredDifficultyOrder = puzzlesForIds.every((puzzle, index) => puzzle!.difficulty === lineupOrder[index]);
   const shapeSlots = puzzlesForIds.flatMap((puzzle, index) => isShapePuzzle(puzzle!) ? [index] : []);
-  return hasRequiredDifficultyOrder && shapeSlots.length === 1 && (shapeSlots[0] === 3 || shapeSlots[0] === 4) && new Set(ids).size === 5;
+  return hasRequiredDifficultyOrder && shapeSlots.length === 1 && new Set(ids).size === 5;
 }
 
 export function isCurrentDailyIds(date: string, ids: string[]): boolean {

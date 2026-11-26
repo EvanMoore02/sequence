@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthoredPuzzle } from '../data/puzzleTypes';
 import type { Puzzle } from '../types';
-import { rateDifficulty } from './difficulty';
+import { rateDifficulty, rateVisualDifficulty } from './difficulty';
 import { dailyIds, dailyPuzzles, hasDailyComposition, isWithinDailyCooldown } from './dailyGenerator';
 
 type DailyPuzzle = AuthoredPuzzle | (Puzzle & { pattern: AuthoredPuzzle['pattern']; difficultyScore: number });
@@ -199,10 +199,11 @@ function checkPuzzle(puzzle: DailyPuzzle) {
   expect(puzzle.rule.trim().length).toBeGreaterThan(2);
   if (puzzle.pattern.type !== 'visual-matrix') expect(puzzle.explanation.split(/[^0-9-]+/).includes(String(puzzle.answer)), puzzle.id + ': ' + puzzle.explanation + ' (answer ' + puzzle.answer + ')').toBe(true);
   if ('difficultyScore' in puzzle) {
-    expect(rateDifficulty(puzzle.sequence, puzzle.answer, puzzle.pattern)).toEqual({
-      score: puzzle.difficultyScore,
-      difficulty: puzzle.difficulty,
-    });
+    const expected = { score: puzzle.difficultyScore, difficulty: puzzle.difficulty };
+    const possibleRatings = puzzle.visualPattern
+      ? [rateVisualDifficulty(puzzle.visualPattern.family!), rateDifficulty(puzzle.sequence, puzzle.answer, puzzle.pattern)]
+      : [rateDifficulty(puzzle.sequence, puzzle.answer, puzzle.pattern)];
+    expect(possibleRatings).toContainEqual(expected);
   }
 }
 
@@ -210,6 +211,12 @@ function dateOffset(date: string, days: number): string {
   const value = new Date(date + 'T00:00:00Z');
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
+}
+
+function familyKey(puzzle: DailyPuzzle): string {
+  if (puzzle.letterPattern) return 'letter:' + puzzle.letterPattern.family;
+  if (puzzle.visualPattern) return 'visual:' + (puzzle.visualPattern.family ?? 'matrix') + ':' + (puzzle.visualPattern.taskFormat ?? 'complete-matrix');
+  return 'number:' + puzzle.pattern.type;
 }
 
 describe('generated Daily Challenge', () => {
@@ -244,9 +251,47 @@ describe('generated Daily Challenge', () => {
       expect(lineup, 'no lineup for preview day ' + day).not.toBeNull();
       expect(lineup).toHaveLength(5);
       expect(lineup!.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
-      expect([lineup![3].visualPattern, lineup![4].visualPattern].filter(Boolean)).toHaveLength(1);
-      const shapePuzzle = lineup![3].visualPattern ?? lineup![4].visualPattern;
-      expect(shapePuzzle).toBeDefined();
+      expect(lineup!.filter((puzzle) => puzzle.visualPattern)).toHaveLength(1);
+      expect(lineup!.some((puzzle) => puzzle.visualPattern)).toBe(true);
+    }
+  });
+
+  it('balances pattern families and challenge positions after the selector cutover', () => {
+    const shapePositions = new Set<number>();
+    const visualFamilies = new Set<string>();
+    const visualFamilyCounts = new Map<string, number>();
+    const visualFamilyCountsByDifficulty = new Map<string, Map<string, number>>();
+    const letterPositions = new Set<number>();
+    const start = '2026-11-26';
+    for (let day = 0; day < 90; day += 1) {
+      const date = dateOffset(start, day);
+      const lineup = dailyPuzzles(date)!;
+      expect(lineup.map((puzzle) => puzzle.difficulty)).toEqual(['Medium', 'Hard', 'Hard', 'Expert', 'Expert']);
+      expect(new Set(lineup.map(familyKey)).size, date + ' should have five distinct families').toBe(5);
+      expect(lineup.filter((puzzle) => puzzle.visualPattern)).toHaveLength(1);
+      const shapeIndex = lineup.findIndex((puzzle) => Boolean(puzzle.visualPattern));
+      shapePositions.add(shapeIndex);
+      visualFamilies.add(lineup[shapeIndex].visualPattern!.family!);
+      const visualFamily = lineup[shapeIndex].visualPattern!.family!;
+      visualFamilyCounts.set(visualFamily, (visualFamilyCounts.get(visualFamily) ?? 0) + 1);
+      const tierCounts = visualFamilyCountsByDifficulty.get(lineup[shapeIndex].difficulty) ?? new Map<string, number>();
+      tierCounts.set(visualFamily, (tierCounts.get(visualFamily) ?? 0) + 1);
+      visualFamilyCountsByDifficulty.set(lineup[shapeIndex].difficulty, tierCounts);
+
+      const expectsLetter = day % 3 === 2;
+      expect(lineup.filter((puzzle) => puzzle.letterPattern)).toHaveLength(expectsLetter ? 1 : 0);
+      const letterIndex = lineup.findIndex((puzzle) => Boolean(puzzle.letterPattern));
+      if (letterIndex >= 0) letterPositions.add(letterIndex);
+
+      expect(dailyPuzzles(date)).toEqual(lineup);
+    }
+    expect([...shapePositions].sort()).toEqual([0, 1, 2, 3, 4]);
+    expect(visualFamilies.size).toBe(12);
+    expect([...letterPositions].sort()).toEqual([0, 1, 2, 3, 4]);
+    expect(Math.max(...visualFamilyCounts.values()) - Math.min(...visualFamilyCounts.values())).toBeLessThanOrEqual(6);
+    for (const counts of visualFamilyCountsByDifficulty.values()) {
+      const values = [...counts.values()];
+      expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(2);
     }
   });
 

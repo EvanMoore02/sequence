@@ -48,6 +48,21 @@ const patternComplexity: Record<AnswerPattern['type'], number> = {
   'visual-matrix': 5,
 };
 
+const visualFamilyComplexity: Record<NonNullable<NonNullable<Puzzle['visualPattern']>['family']>, number> = {
+  'odd-tile-out': 2,
+  'row-distribution': 3,
+  'count-progression': 3,
+  'orbit-movement': 3,
+  'attribute-cycle': 4,
+  reflection: 4,
+  'analogy-transform': 4,
+  'diagonal-symmetry': 5,
+  'nested-shapes': 6,
+  'shape-overlap': 6,
+  'shape-xor': 6,
+  'shape-union': 6,
+};
+
 function levelFor(score: number): DifficultyRating {
   if (score <= 1) return 'Easy';
   if (score <= 3) return 'Medium';
@@ -107,5 +122,11 @@ export function rateDifficulty(sequence: number[], answer: number, pattern: Answ
   if (values.some((value) => value < 0)) score += 1;
 
   score += ambiguityPoints(values, pattern);
+  return { score, difficulty: levelFor(score) };
+}
+
+/** Rate visual puzzles by the reasoning family instead of assigning every grid Expert. */
+export function rateVisualDifficulty(family: NonNullable<NonNullable<Puzzle['visualPattern']>['family']>) {
+  const score = visualFamilyComplexity[family];
   return { score, difficulty: levelFor(score) };
 }

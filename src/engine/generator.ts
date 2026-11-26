@@ -1,6 +1,6 @@
 import type {Puzzle,VisualShape,VisualTile} from '../types';
 import type {AnswerPattern} from '../data/puzzleTypes';
-import {rateDifficulty, ratingForPlayerDifficulty, type PlayerDifficulty} from './difficulty';
+import {rateDifficulty, rateVisualDifficulty, ratingForPlayerDifficulty, type PlayerDifficulty} from './difficulty';
 
 export type PracticeDifficulty=PlayerDifficulty|'All';
 export type GeneratedPuzzle=Puzzle&{templateId:string;difficultyScore:number;pattern:AnswerPattern;shapePattern?:{sequence:string[];answer:string;choices:string[]}};
@@ -360,8 +360,9 @@ const decreasingDifferences: PuzzleTemplate={id:'decreasing-differences',categor
 }};
 const shapePattern: PuzzleTemplate={id:'visual-matrix',category:'Visual reasoning',generate:rng=>{
  const visual=makeVisualMatrix(rng),{answerIndex,explanation,ruleText}=visual;
+ const rating=rateVisualDifficulty(visual.family);
  const p=make('visual-matrix:'+visual.family+':'+visual.missingIndex+':'+visual.cells.map(value=>value?tileKey(value):'?').join(','),'Visual reasoning',[0,1,2,3],answerIndex,visual.puzzleRule,explanation,['Compare tiles in the same row or column. What changes from one tile to the next?','Track one feature at a time: shape, number, fill, direction, or position. Check whether that change repeats.',ruleText],{type:'visual-matrix',shapeStep:1,fillByRow:false,rotationByColumn:false});
- return {...p,visualPattern:{cells:visual.cells,choices:visual.choices,answerIndex,missingIndex:visual.missingIndex,rows:visual.rows,columns:visual.columns,family:visual.family,ruleTypes:visual.ruleTypes,taskFormat:visual.taskFormat}};
+ return {...p,difficulty:rating.difficulty,difficultyScore:rating.score,visualPattern:{cells:visual.cells,choices:visual.choices,answerIndex,missingIndex:visual.missingIndex,rows:visual.rows,columns:visual.columns,family:visual.family,ruleTypes:visual.ruleTypes,taskFormat:visual.taskFormat}};
 }};
 export const templates:PuzzleTemplate[]=[arithmetic,missingMiddle,oddTerm,geometric,powers,fibonacci,differences,doubling,recurrence,factorial,primes,triangular,polygonal,lookAndSay,weightedRecurrence,reverseAdd,digitSum,digitProduct,collatz,primeGaps,modularCycle,tribonacci,lucas,pell,alternatingSteps,alternatingOperations,interleaved,decreasingDifferences,shapePattern];
 // Alternating operations are less frequent than other templates in random play.
