@@ -8,6 +8,6 @@ export function difficultyForSolvedCount(solved: number): EndlessDifficulty {
 }
 
 export function endlessPuzzlePoints(attempts: number, hints: number): number {
-  const base = [100, 70, 40, 10][Math.min(3, Math.max(0, hints))];
+  const base = [100, 70, 40][Math.min(2, Math.max(0, hints))];
   return Math.max(10, base - Math.max(0, attempts - 1) * 10);
 }

@@ -69,7 +69,7 @@ export default function DailyPreview({ onBack }: { onBack: () => void }) {
                   <p>{puzzle.explanation}</p>
                   <details className="daily-preview-hints">
                     <summary>Show hints</summary>
-                    <ol>{puzzle.hints.map((hint, hintIndex) => <li key={hintIndex}>{hint}</li>)}</ol>
+                    <ol>{puzzle.hints.slice(1).map((hint, hintIndex) => <li key={hintIndex}>{hint}</li>)}</ol>
                   </details>
                 </article>
               )) : <DailyUnavailable />}

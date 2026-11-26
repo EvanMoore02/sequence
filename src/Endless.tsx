@@ -317,7 +317,7 @@ export default function Endless({ onExit }: { onExit: () => void }) {
   }
 
   function hint() {
-    if (!run || run.outcome || run.hintLevel >= 3) return;
+    if (!run || run.outcome || run.hintLevel >= 2) return;
     setSave((current) => current.run ? {
       ...current,
       run: { ...current.run, hintLevel: current.run.hintLevel + 1, hints: current.run.hints + 1 },
@@ -364,8 +364,8 @@ export default function Endless({ onExit }: { onExit: () => void }) {
           {!run.outcome && <>
             <div className="attempts"><span>ONE TRY THIS PUZZLE</span><div><i className={run.attempts ? 'spent' : ''} /></div></div>
             {puzzle!.shapePattern ? <div className="shape-choices" role="group" aria-label="Choose the next shape">{puzzle!.shapePattern.choices.map((shape) => <button type="button" key={shape} aria-pressed={run.input === shape} onClick={() => setSave((current) => current.run ? { ...current, run: { ...current.run, input: shape } } : current)}>{shape}</button>)}<button className="submit" disabled={!run.input} onClick={() => submit({ preventDefault() {} } as FormEvent)}>Submit answer <ArrowRight size={16} /></button></div> : <form onSubmit={submit}><label className="answer-label" htmlFor="endless-answer">Your answer</label><div className="inputrow"><input id="endless-answer" type="text" inputMode="text" enterKeyHint="done" autoCapitalize="off" autoCorrect="off" autoComplete="off" placeholder={missingTerms(puzzle!).length > 1 ? 'Separate answers with commas' : 'Type a number'} value={run.input} onChange={(event) => { setSave((current) => current.run ? { ...current, run: { ...current.run, input: event.target.value } } : current); setNote(''); }} /><button className="submit" disabled={!run.input.trim()}>Submit answer <ArrowRight size={16} /></button></div></form>}
-            <button className="hintbutton" disabled={run.hintLevel >= 3} onClick={hint}><Lightbulb size={17} />{run.hintLevel ? 'Reveal next hint' : 'Get a hint'} {run.hintLevel}/3</button>
-            {run.hintLevel > 0 && <aside>HINT {run.hintLevel}<p>{puzzle!.hints[run.hintLevel - 1]}</p></aside>}
+            <button className="hintbutton" disabled={run.hintLevel >= 2} onClick={hint}><Lightbulb size={17} />{run.hintLevel ? 'Reveal next hint' : 'Get a hint'} {run.hintLevel}/2</button>
+            {run.hintLevel > 0 && <aside>HINT {run.hintLevel}<p>{puzzle!.hints[run.hintLevel]}</p></aside>}
             {note && <p role="status" className="notice">{note}</p>}
           </>}
           </div><section className="endless-history" aria-label="Answer history"><div className="endless-history-head"><strong>Answers</strong><span>{save.history.filter((item) => item.correct).length} right · {save.history.filter((item) => !item.correct).length} wrong</span></div>{save.history.length ? <div className="endless-history-list">{save.history.map((entry, index) => <button type="button" key={entry.puzzle.id + ':' + index} className={entry.correct ? 'right-answer' : 'wrong-answer'} onClick={() => openReview(entry)}><span className="answer-result-mark" aria-hidden="true">{entry.correct ? <Check size={15}/> : <CloseIcon size={15}/>}</span><span><b>{entry.puzzle.category}</b><small>{entry.correct ? entry.answer : 'You: ' + (entry.submitted || 'No answer saved')}</small></span><ArrowRight size={14} aria-hidden="true" /></button>)}</div> : <p>Submitted answers will appear here.</p>}</section></div>

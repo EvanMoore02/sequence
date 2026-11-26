@@ -1,9 +1,9 @@
 import type { Result } from '../types';
 
-const pointsByHint = [100, 70, 40, 10];
+const pointsByHint = [100, 70, 40];
 
 export function dailyPuzzlePoints(attempts: number, hints: number): number {
-  const base = pointsByHint[Math.min(3, Math.max(0, hints))];
+  const base = pointsByHint[Math.min(2, Math.max(0, hints))];
   const extraAttempts = Math.max(0, attempts - 1);
   return Math.max(10, base - extraAttempts * 10);
 }
