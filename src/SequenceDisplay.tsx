@@ -53,10 +53,12 @@ export default function SequenceDisplay({
   puzzle,
   revealed = false,
   solved = false,
+  walkthroughStep,
 }: {
   puzzle: Puzzle;
   revealed?: boolean;
   solved?: boolean;
+  walkthroughStep?: number;
 }) {
   const [selectedVisualOption, setSelectedVisualOption] = useState<number | null>(null);
   const visualInstructionId = useId();
@@ -91,7 +93,8 @@ export default function SequenceDisplay({
             const index=row*columnCount+column,tile=visual.cells[index],isOddAnswer=visual.taskFormat==='find-odd-tile'&&revealed&&index===visual.missingIndex;
             const cellLabel=tile?'Row '+(row+1)+', column '+(column+1)+': '+describeTile(tile)+(isOddAnswer?', odd tile':''):revealed?'Row '+(row+1)+', column '+(column+1)+': '+describeTile(visual.choices[visual.answerIndex]):'Missing cell, row '+(row+1)+', column '+(column+1);
             const answerClass=(!tile||isOddAnswer)?' visual-answer-cell '+(solved?'solved':'missed'):'';
-            return <div className={'visual-cell'+(!tile?(revealed?' '+answerClass:' unknown'):isOddAnswer?' '+answerClass:'')} role="cell" key={column} aria-label={cellLabel}>
+            const walkthroughRow = walkthroughStep !== undefined && (walkthroughStep === row || (visual.family === 'diagonal-symmetry' && walkthroughStep === column));
+            return <div className={'visual-cell'+(!tile?(revealed?' '+answerClass:' unknown'):isOddAnswer?' '+answerClass:'')+(walkthroughRow?' walkthrough-cell-active':'')} role="cell" key={column} aria-label={cellLabel}>
               {tile ? <TileImage tile={tile} /> : revealed ? <TileImage tile={visual.choices[visual.answerIndex]} /> : <span className="visual-missing-mark" aria-hidden="true">?</span>}
             </div>;
           })}
@@ -116,7 +119,8 @@ export default function SequenceDisplay({
     return <div className="shape-question"><div className="numbers shape-sequence" role="list" aria-label="Shape pattern">{shapes.map((shape, index) => {
       const blank = index === puzzle.shapePattern!.sequence.length;
       const reveal = !blank || revealed;
-      return <b key={index} className={'tile' + (blank && !revealed ? ' unknown' : '') + (blank && revealed ? (solved ? ' success' : ' missed') : '')} role="listitem" aria-label={blank && !reveal ? 'Next shape missing' : 'Shape ' + shape}>{reveal ? <SequenceShapeIcon shape={shape}/> : <span className="visual-missing-mark" aria-hidden="true">?</span>}</b>;
+      const active = walkthroughStep === index || walkthroughStep === index - 1;
+      return <b key={index} className={'tile' + (blank && !revealed ? ' unknown' : '') + (blank && revealed ? (solved ? ' success' : ' missed') : '') + (active ? ' walkthrough-shape-active' : '')} role="listitem" aria-label={blank && !reveal ? 'Next shape missing' : 'Shape ' + shape}>{reveal ? <SequenceShapeIcon shape={shape}/> : <span className="visual-missing-mark" aria-hidden="true">?</span>}</b>;
     })}</div>{!revealed && <div className="shape-choices" role="group" aria-label="Choose the next shape">{puzzle.shapePattern.choices.map((shape) => <button type="button" key={shape} aria-label={'Choose ' + shape} aria-pressed="false" onClick={(event) => {
       const input = ['answer', 'practice-answer', 'endless-answer'].map((id) => document.getElementById(id)).find((element) => element instanceof HTMLInputElement);
       if (!input) return;
